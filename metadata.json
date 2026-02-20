@@ -1,0 +1,7 @@
+{
+  "name": "Ping",
+  "description": "The premier platform for Creators and Brands. A high-performance, mobile-first PWA for the creator economy featuring glassmorphism design and swipe-to-match mechanics.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
