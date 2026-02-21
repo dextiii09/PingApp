@@ -19,7 +19,8 @@ import {
 import { auth, db, storage, isConfigured } from "./firebaseConfig";
 import { User, UserRole, Match, Message, AdminStats, UserStatus, VerificationStatus, Contract, Notification } from '../types';
 import { MOCK_BUSINESS_USERS, MOCK_INFLUENCER_USERS, PLACEHOLDER_AVATAR, APP_LOGO } from '../constants';
-import { FirebaseAuthentication } from '@capacitor-firebase/authentication'; // Added Capacitor FirebaseAuthentication
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { Capacitor } from '@capacitor/core';
 
 declare global {
   interface Window {
@@ -158,23 +159,29 @@ class FirebaseService {
 
   // --- PHONE OTP AUTHENTICATION --- //
 
-  // The application must set window.confirmationResult when this completes
-  async sendOTP(phoneNumber: string, appVerifierContainerId: string = 'recaptcha-container'): Promise<ConfirmationResult> {
+  async sendOTP(phoneNumber: string, appVerifierContainerId: string = 'recaptcha-container'): Promise<{ verificationId?: string, confirmationResult?: ConfirmationResult }> {
     this.checkConfig();
     try {
-      // Set up Recaptcha
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, appVerifierContainerId, {
-          'size': 'invisible'
-        });
+      if (Capacitor.isNativePlatform()) {
+        // Native Android/iOS bypassing Web reCAPTCHA entirely
+        const result = (await FirebaseAuthentication.signInWithPhoneNumber({
+          phoneNumber,
+        })) as any;
+        if (!result.verificationId) throw new Error("Native verifier did not return an ID");
+        return { verificationId: result.verificationId };
+      } else {
+        // Standard Web Browser Fallback
+        if (!window.recaptchaVerifier) {
+          window.recaptchaVerifier = new RecaptchaVerifier(auth, appVerifierContainerId, {
+            'size': 'invisible'
+          });
+        }
+        const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+        return { confirmationResult };
       }
-
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
-      return confirmationResult;
     } catch (error) {
       console.error("Error sending OTP:", error);
-      // Clean up verifier on error so user can try again easily
-      if (window.recaptchaVerifier) {
+      if (!Capacitor.isNativePlatform() && window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
         window.recaptchaVerifier = undefined;
       }
@@ -182,16 +189,30 @@ class FirebaseService {
     }
   }
 
-  async verifyOTP(verificationId: string, smsCode: string, role?: UserRole, name?: string): Promise<User> {
+  async verifyOTP(payload: { verificationId?: string, confirmationResult?: ConfirmationResult }, smsCode: string, role?: UserRole, name?: string): Promise<User> {
     this.checkConfig();
     try {
-      // 1. Build a credential from the Native SDK's verification parameters
-      const { PhoneAuthProvider, signInWithCredential } = await import('firebase/auth');
-      const credential = PhoneAuthProvider.credential(verificationId, smsCode);
+      let uid = "";
+      let authEmail = "";
 
-      // 2. Transmute the native credential into a JS Web Session
-      const userCredential = await signInWithCredential(auth, credential);
-      const uid = userCredential.user.uid;
+      if (Capacitor.isNativePlatform() && payload.verificationId) {
+        // 1. Build a credential from the Native SDK's verification parameters
+        const { PhoneAuthProvider, signInWithCredential } = await import('firebase/auth');
+        const credential = PhoneAuthProvider.credential(payload.verificationId, smsCode);
+
+        // 2. Transmute the native credential into a JS Web Session
+        const userCredential = await signInWithCredential(auth, credential);
+        uid = userCredential.user.uid;
+        authEmail = userCredential.user.phoneNumber || '';
+      } else if (!Capacitor.isNativePlatform() && payload.confirmationResult) {
+        // Standard Web Verification
+        const result = await payload.confirmationResult.confirm(smsCode);
+        uid = result.user.uid;
+        authEmail = result.user.phoneNumber || '';
+      } else {
+        throw new Error("Invalid OTP Verification Payload provided for the current platform.");
+      }
+
       const userDocRef = doc(db, "users", uid);
       const userDoc = await getDoc(userDocRef);
 
@@ -204,7 +225,7 @@ class FirebaseService {
         const newUser: User = {
           id: uid,
           name,
-          email: `${userCredential.user.phoneNumber?.replace('+', '')}@pingapp.phone`, // Fallback email
+          email: `${authEmail.replace('+', '')}@pingapp.phone`, // Fallback email
           role,
           avatar: PLACEHOLDER_AVATAR,
           bio: '',
@@ -227,7 +248,7 @@ class FirebaseService {
       localStorage.setItem('ping_session_user', JSON.stringify(this.currentUser));
       return this.currentUser;
     } catch (error) {
-      console.error("Error verifying native OTP:", error);
+      console.error("Error verifying OTP:", error);
       throw error;
     }
   }
