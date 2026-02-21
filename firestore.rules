@@ -1,0 +1,81 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      // In a real production app, use Custom Claims for Admin verification (request.auth.token.admin == true)
+      // Since Ping App stores role in the document, we perform an extra read or rely on doc data safely.
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
+    // ------------------------------------------------------------------------
+    // 'users' collection
+    // ------------------------------------------------------------------------
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (necessary for the swipe deck and matches)
+      allow read: if isAuthenticated();
+      
+      // Users can only create their own profile during signup
+      allow create: if isOwner(userId);
+      
+      // Users can only update their own profile, Admins can update any profile
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Nobody should be hard-deleting users from the client, except admins or backend cloud functions
+      allow delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // 'swipes' collection
+    // ------------------------------------------------------------------------
+    match /swipes/{swipeId} {
+      // Users can only read their own outgoing or incoming swipes
+      allow read: if isAuthenticated() && (
+        request.auth.uid == resource.data.fromUserId || 
+        request.auth.uid == resource.data.toUserId
+      );
+      
+      // Users can only create a swipe where they are the 'fromUserId'
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.fromUserId;
+      
+      // Swipes shouldn't be generally updatable or deletable by standard users
+      allow update, delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // 'matches' collection
+    // ------------------------------------------------------------------------
+    match /matches/{matchId} {
+      // Only users involved in the match can read it
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.users;
+      
+      // Users involved in creating the match can write to it
+      // During a swipe, the client determines a match and creates the document. 
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.users;
+      
+      // Updating matches (e.g., updating 'lastMessage' or 'lastActive') is allowed if the user is in the match
+      allow update: if isAuthenticated() && request.auth.uid in resource.data.users;
+      
+      // Deletion of matches
+      allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid in resource.data.users);
+    }
+
+    // ------------------------------------------------------------------------
+    // 'admin_stats' collection or any other strict system collections
+    // ------------------------------------------------------------------------
+    match /{document=**} {
+      // Fallback deny all if not explicitly allowed above.
+      allow read, write: if false;
+    }
+  }
+}
