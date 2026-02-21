@@ -360,11 +360,10 @@ const App = () => {
       let loggedUser;
       if (authMode === 'signup') {
         localStorage.setItem('pendingUserRole', loginRole);
-        // Always redirect to the Firebase Hosting default domain for magic link completion
-        // This completely bypasses the need to manually authorize domains in Firebase Console
+        // Always redirect to the Vercel web app for magic link completion
         const redirectUrl = (window.location.origin && window.location.origin !== 'null' && !window.location.origin.includes('file://'))
           ? window.location.origin
-          : 'https://pingapp-ca5fb.firebaseapp.com';
+          : 'https://ping-app-five.vercel.app';
         await api.sendMagicLink(emailToUse, redirectUrl);
         setEmailSent(true);
       } else {
