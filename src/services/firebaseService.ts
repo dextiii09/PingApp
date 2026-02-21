@@ -6,9 +6,9 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signInWithEmailLink
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult
 } from "firebase/auth";
 import {
   ref,
@@ -18,6 +18,12 @@ import {
 import { auth, db, storage, isConfigured } from "./firebaseConfig";
 import { User, UserRole, Match, Message, AdminStats, UserStatus, VerificationStatus, Contract, Notification } from '../types';
 import { MOCK_BUSINESS_USERS, MOCK_INFLUENCER_USERS, PLACEHOLDER_AVATAR, APP_LOGO } from '../constants';
+
+declare global {
+  interface Window {
+    recaptchaVerifier: any;
+  }
+}
 
 class FirebaseService {
   private currentUser: User | null = null;
@@ -148,30 +154,36 @@ class FirebaseService {
     }
   }
 
-  // --- PASSWORDLESS MAGIC LINK AUTHENTICATION --- //
+  // --- PHONE OTP AUTHENTICATION --- //
 
-  async sendMagicLink(email: string, redirectUrl: string = window.location.href): Promise<void> {
+  // The application must set window.confirmationResult when this completes
+  async sendOTP(phoneNumber: string, appVerifierContainerId: string = 'recaptcha-container'): Promise<ConfirmationResult> {
     this.checkConfig();
-    const actionCodeSettings = {
-      url: redirectUrl,
-      handleCodeInApp: true, // This must be true.
-    };
     try {
-      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-      localStorage.setItem('emailForSignIn', email);
+      // Set up Recaptcha
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, appVerifierContainerId, {
+          'size': 'invisible'
+        });
+      }
+
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, window.recaptchaVerifier);
+      return confirmationResult;
     } catch (error) {
-      console.error("Error sending magic link:", error);
+      console.error("Error sending OTP:", error);
+      // Clean up verifier on error so user can try again easily
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = undefined;
+      }
       throw error;
     }
   }
 
-  async verifyMagicLink(email: string, windowUrl: string, role?: UserRole, name?: string): Promise<User> {
+  async verifyOTP(confirmationResult: ConfirmationResult, otpCode: string, role?: UserRole, name?: string): Promise<User> {
     this.checkConfig();
-    if (!isSignInWithEmailLink(auth, windowUrl)) {
-      throw new Error("Invalid magic link URL.");
-    }
     try {
-      const result = await signInWithEmailLink(auth, email, windowUrl);
+      const result = await confirmationResult.confirm(otpCode);
       const uid = result.user.uid;
       const userDocRef = doc(db, "users", uid);
       const userDoc = await getDoc(userDocRef);
@@ -180,12 +192,12 @@ class FirebaseService {
         // Returning user login
         this.currentUser = userDoc.data() as User;
       } else {
-        // First-time signup via magic link
-        if (!role || !name) throw new Error("Role and Name are required for new account creation via Magic Link.");
+        // First-time signup via OTP
+        if (!role || !name) throw new Error("Role and Name are required for new account creation.");
         const newUser: User = {
           id: uid,
           name,
-          email,
+          email: `${result.user.phoneNumber?.replace('+', '')}@pingapp.phone`, // Fallback email since none exists
           role,
           avatar: PLACEHOLDER_AVATAR,
           bio: '',
@@ -206,10 +218,9 @@ class FirebaseService {
       }
 
       localStorage.setItem('ping_session_user', JSON.stringify(this.currentUser));
-      localStorage.removeItem('emailForSignIn');
       return this.currentUser;
     } catch (error) {
-      console.error("Error verifying magic link:", error);
+      console.error("Error verifying OTP:", error);
       throw error;
     }
   }
