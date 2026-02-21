@@ -18,11 +18,15 @@
     "@vercel/blob": "^2.0.1",
     "canvas-confetti": "^1.9.4",
     "firebase": "^12.8.0",
-    "framer-motion": "11.0.8",
+    "framer-motion": "^11.11.17",
     "lucide-react": "0.300.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "recharts": "2.12.2"
+  },
+  "overrides": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.1.0",
