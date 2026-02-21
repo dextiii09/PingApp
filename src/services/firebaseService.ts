@@ -5,7 +5,10 @@ import {
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut
+  signOut,
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink
 } from "firebase/auth";
 import {
   ref,
@@ -144,6 +147,73 @@ class FirebaseService {
       throw error;
     }
   }
+
+  // --- PASSWORDLESS MAGIC LINK AUTHENTICATION --- //
+
+  async sendMagicLink(email: string, redirectUrl: string = window.location.href): Promise<void> {
+    this.checkConfig();
+    const actionCodeSettings = {
+      url: redirectUrl,
+      handleCodeInApp: true, // This must be true.
+    };
+    try {
+      await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+      localStorage.setItem('emailForSignIn', email);
+    } catch (error) {
+      console.error("Error sending magic link:", error);
+      throw error;
+    }
+  }
+
+  async verifyMagicLink(email: string, windowUrl: string, role?: UserRole, name?: string): Promise<User> {
+    this.checkConfig();
+    if (!isSignInWithEmailLink(auth, windowUrl)) {
+      throw new Error("Invalid magic link URL.");
+    }
+    try {
+      const result = await signInWithEmailLink(auth, email, windowUrl);
+      const uid = result.user.uid;
+      const userDocRef = doc(db, "users", uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        // Returning user login
+        this.currentUser = userDoc.data() as User;
+      } else {
+        // First-time signup via magic link
+        if (!role || !name) throw new Error("Role and Name are required for new account creation via Magic Link.");
+        const newUser: User = {
+          id: uid,
+          name,
+          email,
+          role,
+          avatar: PLACEHOLDER_AVATAR,
+          bio: '',
+          location: '',
+          tags: [],
+          stats: role === UserRole.BUSINESS ? { budget: '₹0' } : { followers: '0', engagement: '0%' },
+          verified: false,
+          status: UserStatus.ACTIVE,
+          verificationStatus: VerificationStatus.UNVERIFIED,
+          joinedAt: Date.now(),
+          reportCount: 0,
+          isPremium: false,
+          socials: {},
+          portfolio: []
+        };
+        await setDoc(userDocRef, newUser);
+        this.currentUser = newUser;
+      }
+
+      localStorage.setItem('ping_session_user', JSON.stringify(this.currentUser));
+      localStorage.removeItem('emailForSignIn');
+      return this.currentUser;
+    } catch (error) {
+      console.error("Error verifying magic link:", error);
+      throw error;
+    }
+  }
+
 
   async logout(): Promise<void> {
     if (isConfigured && auth) {

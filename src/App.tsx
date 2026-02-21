@@ -105,6 +105,7 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
   const [showAuthForm, setShowAuthForm] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   // Synchronous sync on render whenever user object changes
   useLayoutEffect(() => {
@@ -144,6 +145,46 @@ const App = () => {
       return () => unsubscribe();
     }
   }, [user?.id, view]);
+
+  // Magic Link Verification Interceptor
+  useEffect(() => {
+    const checkEmailLink = async () => {
+      // Safely check if the current window URL seems to be a Firebase Auth redirect
+      if (window.location.href.includes('apiKey=') && window.location.href.includes('oobCode=')) {
+        setIsLoading(true);
+        try {
+          let storedEmail = window.localStorage.getItem('emailForSignIn');
+          if (!storedEmail) {
+            storedEmail = window.prompt('Please provide your email for confirmation');
+          }
+          if (storedEmail) {
+            const roleStr = (window.localStorage.getItem('pendingUserRole') as UserRole) || UserRole.INFLUENCER;
+            // We use the email prefix as a placeholder name until they hit Onboarding
+            const verifiedUser = await api.verifyMagicLink(storedEmail, window.location.href, roleStr, storedEmail.split('@')[0]);
+            setUser(verifiedUser);
+
+            if (verifiedUser.avatar === PLACEHOLDER_AVATAR && !verifiedUser.bio) {
+              setView('onboarding');
+            } else {
+              setView('app');
+            }
+
+            // Scrub the one-time URL tokens so they don't refresh into an error
+            window.history.replaceState({}, document.title, window.location.pathname);
+            showToast("Successfully verified email!");
+          }
+        } catch (e: any) {
+          console.error("Magic link verification failed:", e);
+          setAuthError("Failed to verify confirmation link. It may have expired.");
+          setView('landing');
+          setShowAuthForm(true);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+    checkEmailLink();
+  }, []);
 
   const refreshData = useCallback(async () => {
     // Only attempt data load if we have a valid authenticated user
@@ -284,19 +325,9 @@ const App = () => {
 
       let loggedUser;
       if (authMode === 'signup') {
-        try {
-          loggedUser = await api.signup(emailToUse, passToUse, loginRole, emailToUse.split('@')[0]);
-          setUser(loggedUser);
-          setView('onboarding');
-        } catch (signupError: any) {
-          if (signupError.code === 'auth/email-already-in-use') {
-            loggedUser = await api.login(loginRole, emailToUse, passToUse);
-            setUser(loggedUser);
-            setView('app');
-          } else {
-            throw signupError;
-          }
-        }
+        localStorage.setItem('pendingUserRole', loginRole);
+        await api.sendMagicLink(emailToUse, window.location.origin);
+        setEmailSent(true);
       } else {
         loggedUser = await api.login(loginRole, emailToUse, passToUse);
         setUser(loggedUser);
@@ -429,27 +460,58 @@ const App = () => {
                   <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold"><AlertCircle size={14} />{authError}</div>
                 )}
                 <form onSubmit={handleLogin} className="space-y-5">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-wider">Email Address</label>
-                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="name@example.com" required />
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center ml-1">
-                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
-                      {authMode === 'signin' && <button type="button" className="text-xs font-bold text-pink-500">Forgot?</button>}
-                    </div>
-                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="••••••••" required />
-                  </div>
-                  <Button type="submit" fullWidth className={`h-16 text-lg rounded-full mt-2 shadow-xl shadow-pink-500/20 border-none ${buttonGradient}`}>{isLoading ? (<span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</span>) : (authMode === 'signin' ? 'Sign In' : 'Create Account')}</Button>
-                  {authMode === 'signin' && (
-                    <div className="flex gap-2 pt-2">
-                      <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
-                      <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
-                    </div>
+                  {emailSent ? (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6 space-y-4">
+                      <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-pink-100 shadow-sm">
+                        <Mail className="text-pink-500" size={32} />
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900">Check your email</h3>
+                      <p className="text-gray-500 text-sm leading-relaxed max-w-[250px] mx-auto">
+                        We've sent a magic login link to <br />
+                        <span className="font-bold text-gray-900 text-base">{email}</span>
+                      </p>
+                      <Button type="button" onClick={() => setEmailSent(false)} variant="ghost" className="mt-4 text-pink-500 hover:bg-pink-50">
+                        Try another email
+                      </Button>
+                    </motion.div>
+                  ) : (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-wider">Email Address</label>
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="name@example.com" required />
+                      </div>
+                      {authMode === 'signin' && (
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center ml-1">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
+                            <button type="button" className="text-xs font-bold text-pink-500">Forgot?</button>
+                          </div>
+                          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="••••••••" required />
+                        </div>
+                      )}
+                      <Button type="submit" fullWidth className={`h-16 text-lg rounded-full mt-2 shadow-xl shadow-pink-500/20 border-none ${buttonGradient}`}>
+                        {isLoading ? (
+                          <span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</span>
+                        ) : (
+                          authMode === 'signin' ? 'Sign In' : 'Send Magic Link'
+                        )}
+                      </Button>
+                      {authMode === 'signin' && (
+                        <div className="flex gap-2 pt-2">
+                          <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
+                          <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
+                        </div>
+                      )}
+                      <div className="text-center pt-2">
+                        <p className="text-sm text-gray-500 font-medium">
+                          {authMode === 'signin' ? "Don't have an account?" : "Already have an account?"} {' '}
+                          <button type="button" onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); setAuthError(null); setEmailSent(false); }} className="text-gray-900 font-bold hover:underline">
+                            {authMode === 'signin' ? 'Sign up' : 'Log in'}
+                          </button>
+                        </p>
+                      </div>
+                    </>
                   )}
-                  <div className="text-center pt-2">
-                    <p className="text-sm text-gray-500 font-medium">{authMode === 'signin' ? "Don't have an account?" : "Already have an account?"} {' '}<button type="button" onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); setAuthError(null); }} className="text-gray-900 font-bold hover:underline">{authMode === 'signin' ? 'Sign up' : 'Log in'}</button></p>
-                  </div>
                 </form>
               </motion.div>
             )}

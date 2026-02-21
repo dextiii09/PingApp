@@ -1,21 +1,21 @@
-import React from 'react';
-import { motion, MotionProps } from 'framer-motion';
+import React, { ReactNode } from 'react';
+import { motion, HTMLMotionProps } from 'framer-motion';
 
-export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & MotionProps & {
+export interface ButtonProps extends HTMLMotionProps<"button"> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'icon';
   fullWidth?: boolean;
-  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
-  children?: React.ReactNode;
+  children?: ReactNode;
   className?: string;
+  onClick?: any;
+  type?: "button" | "submit" | "reset";
   disabled?: boolean;
-};
+}
 
 export const Button = ({
   children,
   variant = 'primary',
   fullWidth = false,
   className = '',
-  style,
   ...props
 }: ButtonProps) => {
   const baseStyles = "relative font-bold flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed tracking-wide transition-all duration-300 overflow-hidden";
@@ -35,7 +35,6 @@ export const Button = ({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.96 }}
       className={`${baseStyles} ${variants[variant]} ${sizes} ${width} ${className}`}
-      style={{ willChange: 'transform', ...style }}
       {...props}
     >
       {children}
