@@ -11,9 +11,10 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { EditProfile } from './components/EditProfile';
 import { SettingsView } from './components/SettingsView';
 import { Dashboard } from './components/Dashboard';
+import { AnalyticsView } from './components/AnalyticsView';
 import { Onboarding } from './components/Onboarding';
 import { PremiumPage } from './components/PremiumPage';
-import { NotificationsView } from './components/NotificationsView'; 
+import { NotificationsView } from './components/NotificationsView';
 import { BottomNav } from './components/BottomNav';
 // Add PLACEHOLDER_AVATAR to imports from constants
 import { APP_LOGO, PLACEHOLDER_AVATAR } from './constants';
@@ -76,7 +77,7 @@ const App = () => {
 
   const [activeTab, setActiveTab] = useState<'home' | 'matches' | 'profile'>('home');
   const [homeView, setHomeView] = useState<'dashboard' | 'deck' | 'analytics' | 'likes'>('dashboard');
-  
+
   // Data State
   const [candidates, setCandidates] = useState<User[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
@@ -90,8 +91,12 @@ const App = () => {
   const [showPremium, setShowPremium] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(user?.settings?.darkMode ?? false); 
+  const [isDarkMode, setIsDarkMode] = useState(user?.settings?.darkMode ?? false);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // Swipe Limits & History
+  const [dailySwipeCount, setDailySwipeCount] = useState(0);
+  const [swipeHistory, setSwipeHistory] = useState<{ user: User; direction: 'left' | 'right' | 'up' }[]>([]);
 
   // Login Form State
   const [loginRole, setLoginRole] = useState<UserRole>(UserRole.INFLUENCER);
@@ -114,7 +119,7 @@ const App = () => {
       localStorage.setItem('ping_session_user', JSON.stringify(user));
       // Sync Dark Mode from user settings if changed remotely
       if (user.settings?.darkMode !== undefined && user.settings.darkMode !== isDarkMode) {
-          setIsDarkMode(user.settings.darkMode);
+        setIsDarkMode(user.settings.darkMode);
       }
     } else if (user === null) {
       localStorage.removeItem('ping_session_user');
@@ -146,25 +151,39 @@ const App = () => {
       console.debug("Data load deferred: No authenticated user context.");
       return;
     }
-    
+
     // Explicit sync before calling API to avoid race conditions
     api.syncSession(user);
 
     try {
       setIsDeckLoading(true);
-      const [cands, notifs, likes] = await Promise.all([
+
+      // Fetch data in parallel but handle individual failures gracefully
+      const fetchResults = await Promise.allSettled([
         api.getCandidates(user.role),
         api.getNotifications(),
-        api.getNewLikesCount()
+        api.getNewLikesCount(),
+        api.getDailySwipeCount(user.id)
       ]);
-      setCandidates(cands);
-      setNotifications(notifs);
-      setLikeCount(likes);
-      console.debug("Application data refreshed successfully.");
+
+      if (fetchResults[0].status === 'fulfilled') setCandidates(fetchResults[0].value);
+      if (fetchResults[1].status === 'fulfilled') setNotifications(fetchResults[1].value);
+      if (fetchResults[2].status === 'fulfilled') setLikeCount(fetchResults[2].value);
+      if (fetchResults[3].status === 'fulfilled') setDailySwipeCount(fetchResults[3].value);
+
+      // Log errors but don't crash
+      fetchResults.forEach((res, i) => {
+        if (res.status === 'rejected') {
+          console.warn(`Non-critical load error (index ${i}):`, res.reason);
+        }
+      });
+
+      console.debug("Application data refreshed (partial or full).");
     } catch (e: any) {
       console.error("Critical Data Load Error:", e);
-      if (user.id && !user.id.startsWith('test-') && view === 'app') {
-          setAuthError(e.message || "Failed to load data. Please try again.");
+      // Only set auth error for non-index errors or fatal ones
+      if (!e.message?.includes('index') && user.id && !user.id.startsWith('test-') && view === 'app') {
+        setAuthError(e.message || "Failed to load data. Please try again.");
       }
     } finally {
       setIsDeckLoading(false);
@@ -179,7 +198,7 @@ const App = () => {
   }, [user?.id, view, refreshData]);
 
   // --- BACK BUTTON HANDLING ---
-  
+
   const pushHistoryState = useCallback((stateName: string) => {
     window.history.pushState({ view: stateName }, '');
   }, []);
@@ -265,23 +284,23 @@ const App = () => {
 
       let loggedUser;
       if (authMode === 'signup') {
-         try {
-           loggedUser = await api.signup(emailToUse, passToUse, loginRole, emailToUse.split('@')[0]);
-           setUser(loggedUser);
-           setView('onboarding');
-         } catch (signupError: any) {
-           if (signupError.code === 'auth/email-already-in-use') {
-             loggedUser = await api.login(loginRole, emailToUse, passToUse);
-             setUser(loggedUser);
-             setView('app');
-           } else {
-             throw signupError;
-           }
-         }
+        try {
+          loggedUser = await api.signup(emailToUse, passToUse, loginRole, emailToUse.split('@')[0]);
+          setUser(loggedUser);
+          setView('onboarding');
+        } catch (signupError: any) {
+          if (signupError.code === 'auth/email-already-in-use') {
+            loggedUser = await api.login(loginRole, emailToUse, passToUse);
+            setUser(loggedUser);
+            setView('app');
+          } else {
+            throw signupError;
+          }
+        }
       } else {
-         loggedUser = await api.login(loginRole, emailToUse, passToUse);
-         setUser(loggedUser);
-         setView('app');
+        loggedUser = await api.login(loginRole, emailToUse, passToUse);
+        setUser(loggedUser);
+        setView('app');
       }
     } catch (err: any) {
       console.error(err);
@@ -291,7 +310,7 @@ const App = () => {
       if (err.code === 'auth/user-not-found') msg = "User not found.";
       if (err.code === 'auth/invalid-credential') msg = "Invalid credentials.";
       if (err.code === 'auth/weak-password') msg = "Password should be at least 6 characters.";
-      if (err.message && !msg.includes('Email')) msg = err.message; 
+      if (err.message && !msg.includes('Email')) msg = err.message;
       setAuthError(msg);
     } finally {
       setIsLoading(false);
@@ -299,18 +318,18 @@ const App = () => {
   };
 
   const handleDemoLogin = (type: 'business' | 'creator') => {
-     let dEmail = '';
-     const dPass = 'demo123';
-     if (type === 'business') {
-        dEmail = 'hello@pixelarcade.co';
-        setLoginRole(UserRole.BUSINESS);
-     } else {
-        dEmail = 'jamie.travels@social.com';
-        setLoginRole(UserRole.INFLUENCER);
-     }
-     setEmail(dEmail);
-     setPassword(dPass);
-     handleLogin(undefined, dEmail, dPass);
+    let dEmail = '';
+    const dPass = 'demo123';
+    if (type === 'business') {
+      dEmail = 'hello@pixelarcade.co';
+      setLoginRole(UserRole.BUSINESS);
+    } else {
+      dEmail = 'jamie.travels@social.com';
+      setLoginRole(UserRole.INFLUENCER);
+    }
+    setEmail(dEmail);
+    setPassword(dPass);
+    handleLogin(undefined, dEmail, dPass);
   };
 
   const handleLogout = async () => {
@@ -331,7 +350,7 @@ const App = () => {
       setUser(updated);
       try {
         await api.updateUserProfile(user.id, data);
-        if(!data.settings) showToast("Profile Saved");
+        if (!data.settings) showToast("Profile Saved");
       } catch (e) {
         console.error("Failed to save profile", e);
         showToast("Error saving profile");
@@ -340,11 +359,11 @@ const App = () => {
   };
 
   const handleToggleTheme = () => {
-      const nextMode = !isDarkMode;
-      setIsDarkMode(nextMode);
-      if (user) {
-          handleUpdateUser({ settings: { ...(user.settings || {}), darkMode: nextMode } });
-      }
+    const nextMode = !isDarkMode;
+    setIsDarkMode(nextMode);
+    if (user) {
+      handleUpdateUser({ settings: { ...(user.settings || {}), darkMode: nextMode } });
+    }
   };
 
   const handleMatchChat = async (matchedUser: User) => {
@@ -369,73 +388,73 @@ const App = () => {
           <div className="blob blob-3"></div>
         </div>
         <div className="px-6 pt-8 pb-4 flex justify-between items-center relative z-10 safe-top">
-           <div className="flex items-center gap-2">
-              <img src={APP_LOGO} alt="Ping Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-blue-500/20" />
-              <span className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-400 tracking-tight">Ping</span>
-           </div>
-           {!showAuthForm && (
-             <button onClick={() => { setAuthMode('signin'); setShowAuthForm(true); setAuthError(null); }} className="flex items-center gap-2 text-gray-600 font-bold text-sm hover:text-gray-900 transition-colors">
-                <Lock size={16} /> Log in
-             </button>
-           )}
+          <div className="flex items-center gap-2">
+            <img src={APP_LOGO} alt="Ping Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-blue-500/20" />
+            <span className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-400 tracking-tight">Ping</span>
+          </div>
+          {!showAuthForm && (
+            <button onClick={() => { setAuthMode('signin'); setShowAuthForm(true); setAuthError(null); }} className="flex items-center gap-2 text-gray-600 font-bold text-sm hover:text-gray-900 transition-colors">
+              <Lock size={16} /> Log in
+            </button>
+          )}
         </div>
         <div className="flex-1" />
         <div className="bg-white w-full rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] p-8 pb-12 relative z-10 animate-in slide-in-from-bottom duration-500">
-           <AnimatePresence mode="wait">
-             {!showAuthForm ? (
-               <motion.div key="welcome" variants={containerVariants} initial="hidden" animate="visible" exit="hidden">
-                 <motion.div variants={itemVariants as any} className="bg-gray-100 p-1.5 rounded-full flex mb-10 max-w-xs mx-auto shadow-inner">
-                    <button onClick={() => setLoginRole(UserRole.INFLUENCER)} className={`flex-1 py-3 rounded-full text-sm font-bold transition-all duration-300 ${isCreator ? 'bg-white text-gray-900 shadow-md transform scale-100' : 'text-gray-400 hover:text-gray-600'}`}>Creator</button>
-                    <button onClick={() => setLoginRole(UserRole.BUSINESS)} className={`flex-1 py-3 rounded-full text-sm font-bold transition-all duration-300 ${!isCreator ? 'bg-white text-gray-900 shadow-md transform scale-100' : 'text-gray-400 hover:text-gray-600'}`}>Brand</button>
-                 </motion.div>
-                 <motion.div variants={itemVariants as any} className="text-center space-y-6 mb-10">
-                    <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-[1.15] tracking-tight">
-                      {isCreator ? (<>Monetize your <br /><span className={`text-transparent bg-clip-text bg-gradient-to-r ${gradientText}`}>Influence.</span></>) : (<>Hire the world's <br /><span className={`text-transparent bg-clip-text bg-gradient-to-r ${gradientText}`}>Best Talent.</span></>)}
-                    </h1>
-                    <p className="text-gray-500 text-sm sm:text-base leading-relaxed max-w-xs mx-auto font-medium">
-                      {isCreator ? "Connect with premium brands, manage deals, and get paid instantly." : "Find creators that match your brand identity in seconds, not days."}
-                    </p>
-                 </motion.div>
-                 <motion.div variants={itemVariants as any}>
-                    <Button onClick={() => { setAuthMode('signup'); setShowAuthForm(true); setAuthError(null); }} fullWidth className={`h-16 text-lg rounded-full shadow-xl shadow-pink-500/20 ${buttonGradient} border-none`} animate={{ scale: [1, 1.02, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>Get Started <ArrowRight className="ml-2" /></Button>
-                 </motion.div>
-               </motion.div>
-             ) : (
-               <motion.div key="form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="pt-2">
-                  <div className="flex items-center mb-6">
-                     <button onClick={() => setShowAuthForm(false)} className="p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors"><ChevronLeft size={24} /></button>
-                     <h2 className="text-2xl font-bold text-gray-900 ml-2">{authMode === 'signin' ? 'Welcome Back' : 'Create Account'}</h2>
+          <AnimatePresence mode="wait">
+            {!showAuthForm ? (
+              <motion.div key="welcome" variants={containerVariants} initial="hidden" animate="visible" exit="hidden">
+                <motion.div variants={itemVariants as any} className="bg-gray-100 p-1.5 rounded-full flex mb-10 max-w-xs mx-auto shadow-inner">
+                  <button onClick={() => setLoginRole(UserRole.INFLUENCER)} className={`flex-1 py-3 rounded-full text-sm font-bold transition-all duration-300 ${isCreator ? 'bg-white text-gray-900 shadow-md transform scale-100' : 'text-gray-400 hover:text-gray-600'}`}>Creator</button>
+                  <button onClick={() => setLoginRole(UserRole.BUSINESS)} className={`flex-1 py-3 rounded-full text-sm font-bold transition-all duration-300 ${!isCreator ? 'bg-white text-gray-900 shadow-md transform scale-100' : 'text-gray-400 hover:text-gray-600'}`}>Brand</button>
+                </motion.div>
+                <motion.div variants={itemVariants as any} className="text-center space-y-6 mb-10">
+                  <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-[1.15] tracking-tight">
+                    {isCreator ? (<>Monetize your <br /><span className={`text-transparent bg-clip-text bg-gradient-to-r ${gradientText}`}>Influence.</span></>) : (<>Hire the world's <br /><span className={`text-transparent bg-clip-text bg-gradient-to-r ${gradientText}`}>Best Talent.</span></>)}
+                  </h1>
+                  <p className="text-gray-500 text-sm sm:text-base leading-relaxed max-w-xs mx-auto font-medium">
+                    {isCreator ? "Connect with premium brands, manage deals, and get paid instantly." : "Find creators that match your brand identity in seconds, not days."}
+                  </p>
+                </motion.div>
+                <motion.div variants={itemVariants as any}>
+                  <Button onClick={() => { setAuthMode('signup'); setShowAuthForm(true); setAuthError(null); }} fullWidth className={`h-16 text-lg rounded-full shadow-xl shadow-pink-500/20 ${buttonGradient} border-none`} animate={{ scale: [1, 1.02, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>Get Started <ArrowRight className="ml-2" /></Button>
+                </motion.div>
+              </motion.div>
+            ) : (
+              <motion.div key="form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="pt-2">
+                <div className="flex items-center mb-6">
+                  <button onClick={() => setShowAuthForm(false)} className="p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors"><ChevronLeft size={24} /></button>
+                  <h2 className="text-2xl font-bold text-gray-900 ml-2">{authMode === 'signin' ? 'Welcome Back' : 'Create Account'}</h2>
+                </div>
+                {authError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold"><AlertCircle size={14} />{authError}</div>
+                )}
+                <form onSubmit={handleLogin} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-wider">Email Address</label>
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="name@example.com" required />
                   </div>
-                  {authError && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold"><AlertCircle size={14} />{authError}</div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center ml-1">
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
+                      {authMode === 'signin' && <button type="button" className="text-xs font-bold text-pink-500">Forgot?</button>}
+                    </div>
+                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="••••••••" required />
+                  </div>
+                  <Button type="submit" fullWidth className={`h-16 text-lg rounded-full mt-2 shadow-xl shadow-pink-500/20 border-none ${buttonGradient}`}>{isLoading ? (<span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Processing...</span>) : (authMode === 'signin' ? 'Sign In' : 'Create Account')}</Button>
+                  {authMode === 'signin' && (
+                    <div className="flex gap-2 pt-2">
+                      <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
+                      <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
+                    </div>
                   )}
-                  <form onSubmit={handleLogin} className="space-y-5">
-                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-wider">Email Address</label>
-                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="name@example.com" required />
-                     </div>
-                     <div className="space-y-1.5">
-                        <div className="flex justify-between items-center ml-1">
-                           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
-                           {authMode === 'signin' && <button type="button" className="text-xs font-bold text-pink-500">Forgot?</button>}
-                        </div>
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="••••••••" required />
-                     </div>
-                     <Button type="submit" fullWidth className={`h-16 text-lg rounded-full mt-2 shadow-xl shadow-pink-500/20 border-none ${buttonGradient}`}>{isLoading ? (<span className="flex items-center gap-2"><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> Processing...</span>) : (authMode === 'signin' ? 'Sign In' : 'Create Account')}</Button>
-                     {authMode === 'signin' && (
-                       <div className="flex gap-2 pt-2">
-                          <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
-                          <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
-                       </div>
-                     )}
-                     <div className="text-center pt-2">
-                        <p className="text-sm text-gray-500 font-medium">{authMode === 'signin' ? "Don't have an account?" : "Already have an account?"} {' '}<button type="button" onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); setAuthError(null); }} className="text-gray-900 font-bold hover:underline">{authMode === 'signin' ? 'Sign up' : 'Log in'}</button></p>
-                     </div>
-                  </form>
-               </motion.div>
-             )}
-           </AnimatePresence>
-           {!showAuthForm && (<div className="mt-8 text-center"><p className="text-[10px] text-gray-300 uppercase tracking-[0.2em] font-medium">Ping App by Reachup Media</p></div>)}
+                  <div className="text-center pt-2">
+                    <p className="text-sm text-gray-500 font-medium">{authMode === 'signin' ? "Don't have an account?" : "Already have an account?"} {' '}<button type="button" onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); setAuthError(null); }} className="text-gray-900 font-bold hover:underline">{authMode === 'signin' ? 'Sign up' : 'Log in'}</button></p>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {!showAuthForm && (<div className="mt-8 text-center"><p className="text-[10px] text-gray-300 uppercase tracking-[0.2em] font-medium">Ping App by Reachup Media</p></div>)}
         </div>
       </div>
     );
@@ -449,55 +468,75 @@ const App = () => {
     <div className={`h-screen w-full overflow-hidden flex flex-col relative transition-colors duration-300 ${isDarkMode ? 'dark bg-[#050505] text-white' : 'bg-white text-gray-900'}`}>
       <div className="flex-1 relative overflow-hidden">
         {activeTab === 'home' && (
-           <AnimatePresence mode="wait">
-             {homeView === 'dashboard' ? (
-                <Dashboard key="dashboard" user={user} notificationCount={notifications.filter(n => !n.read).length} newLikesCount={likeCount} onNavigate={handleNavigate} onSettingsClick={() => handleOpenOverlay(setIsSettingsOpen)} onNotificationsClick={() => handleOpenOverlay(setShowNotifications)} onUpgrade={() => handleOpenOverlay(setShowPremium)} onUpdateUser={handleUpdateUser} />
-             ) : homeView === 'analytics' ? (
-                <div key="analytics" className="h-full w-full relative"><div className="p-6"><button onClick={() => setHomeView('dashboard')}>Back</button><h2>Analytics View</h2></div></div>
-             ) : (
-                <div key="deck" className="h-full w-full relative">
-                   <SwipeDeck isLoading={isDeckLoading} candidates={candidates} currentUserRole={user.role} isPremium={user.isPremium} onUpgrade={() => handleOpenOverlay(setShowPremium)} onSwipe={async (dir, candidateId) => {
-                        const result = await api.swipe(user.id, candidateId, dir);
-                        if (result.isMatch) await refreshData();
-                        return result;
-                     }} onMatchChat={handleMatchChat} />
-                   <button onClick={() => setHomeView('dashboard')} className="absolute top-4 left-4 z-50 p-2 bg-black/40 text-white rounded-full backdrop-blur-md border border-white/10">Back</button>
-                </div>
-             )}
-           </AnimatePresence>
+          <AnimatePresence mode="wait">
+            {homeView === 'dashboard' ? (
+              <Dashboard key="dashboard" user={user} notificationCount={notifications.filter(n => !n.read).length} newLikesCount={likeCount} onNavigate={handleNavigate} onSettingsClick={() => handleOpenOverlay(setIsSettingsOpen)} onNotificationsClick={() => handleOpenOverlay(setShowNotifications)} onUpgrade={() => handleOpenOverlay(setShowPremium)} onUpdateUser={handleUpdateUser} />
+            ) : homeView === 'analytics' ? (
+              <AnalyticsView key="analytics" user={user} onBack={() => setHomeView('dashboard')} onUpgrade={() => handleOpenOverlay(setShowPremium)} />
+            ) : (
+              <div key="deck" className="h-full w-full relative">
+                <SwipeDeck
+                  isLoading={isDeckLoading}
+                  candidates={candidates}
+                  currentUserRole={user.role}
+                  isPremium={user.isPremium}
+                  dailySwipeCount={dailySwipeCount}
+                  onSwipeCountChange={setDailySwipeCount}
+                  swipeHistory={swipeHistory}
+                  onSwipeHistoryChange={setSwipeHistory}
+                  onUpgrade={() => handleOpenOverlay(setShowPremium)}
+                  onSwipe={async (dir, candidateId) => {
+                    try {
+                      const result = await api.swipe(user.id, candidateId, dir);
+                      if (result.isMatch) await refreshData();
+                      return result;
+                    } catch (err: any) {
+                      // Log but don't block the UI if it's just a missing index
+                      console.error("Swipe operation failed:", err);
+                      return { isMatch: false };
+                    }
+                  }}
+                  onMatchChat={handleMatchChat}
+                />
+                <button onClick={() => setHomeView('dashboard')} className="absolute top-4 left-4 z-[70] w-10 h-10 flex items-center justify-center bg-white/10 text-white rounded-full backdrop-blur-xl border border-white/20 hover:bg-white/20 transition-all shadow-lg hover:shadow-xl">
+                  <ChevronLeft size={24} />
+                </button>
+              </div>
+            )}
+          </AnimatePresence>
         )}
         {activeTab === 'matches' && (
-           <div className="h-full w-full flex flex-col p-4 pt-10 overflow-y-auto pb-32">
-              <h2 className="text-2xl font-bold mb-6 px-2">Matches & Messages</h2>
-              {matches.length === 0 ? (<div className="flex-1 flex flex-col items-center justify-center text-white/30"><p>No matches yet. Go swipe!</p></div>) : (
-                 <div className="space-y-2">
-                    {matches.map(match => (
-                       <GlassCard key={match.id} onClick={() => handleOpenMatch(match)} className="flex items-center gap-4 p-4 cursor-pointer" intensity="low" hoverEffect={true}>
-                          <img src={match.userProfile?.avatar || PLACEHOLDER_AVATAR} className="w-12 h-12 rounded-full object-cover" alt="" />
-                          <div className="flex-1">
-                             <h3 className="font-bold text-sm">{match.userProfile?.name || "Match"}</h3>
-                             <p className="text-xs text-white/50 truncate">
-                                {match.lastSenderId === user.id ? "You: " : ""}
-                                {match.lastMessage || 'Start a conversation...'}
-                             </p>
-                          </div>
-                          <span className="text-[10px] text-white/30">
-                             {new Date(match.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                       </GlassCard>
-                    ))}
-                 </div>
-              )}
-           </div>
+          <div className="h-full w-full flex flex-col p-4 pt-10 overflow-y-auto pb-32">
+            <h2 className="text-2xl font-bold mb-6 px-2">Matches & Messages</h2>
+            {matches.length === 0 ? (<div className="flex-1 flex flex-col items-center justify-center text-white/30"><p>No matches yet. Go swipe!</p></div>) : (
+              <div className="space-y-2">
+                {matches.map(match => (
+                  <GlassCard key={match.id} onClick={() => handleOpenMatch(match)} className="flex items-center gap-4 p-4 cursor-pointer" intensity="low" hoverEffect={true}>
+                    <img src={match.userProfile?.avatar || PLACEHOLDER_AVATAR} className="w-12 h-12 rounded-full object-cover" alt="" />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-sm">{match.userProfile?.name || "Match"}</h3>
+                      <p className="text-xs text-white/50 truncate">
+                        {match.lastSenderId === user.id ? "You: " : ""}
+                        {match.lastMessage || 'Start a conversation...'}
+                      </p>
+                    </div>
+                    <span className="text-[10px] text-white/30">
+                      {new Date(match.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </GlassCard>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         {activeTab === 'profile' && <EditProfile user={user} onSave={handleUpdateUser} onCancel={() => handleTabChange('home')} />}
       </div>
       <AnimatePresence>
-         {isSettingsOpen && (<div className="fixed inset-0 z-[100] bg-black"><SettingsView user={user} onUpdateUser={handleUpdateUser} onBack={() => setIsSettingsOpen(false)} onLogout={handleLogout} onUpgrade={() => handleOpenOverlay(setShowPremium)} isDarkMode={isDarkMode} onToggleTheme={handleToggleTheme} /></div>)}
-         {showNotifications && <NotificationsView notifications={notifications} onBack={() => setShowNotifications(false)} />}
-         {showPremium && <PremiumPage user={user} onClose={() => setShowPremium(false)} onUpgrade={async () => { await api.upgradeToPremium(); handleUpdateUser({ isPremium: true }); setShowPremium(false); showToast("Welcome to Gold!"); }} />}
-         {selectedMatch && <ChatInterface match={selectedMatch} currentUser={user} onBack={() => setSelectedMatch(null)} isPremium={user.isPremium} onUpgrade={() => handleOpenOverlay(setShowPremium)} />}
-         {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
+        {isSettingsOpen && (<div className="fixed inset-0 z-[100] bg-black"><SettingsView user={user} onUpdateUser={handleUpdateUser} onBack={() => setIsSettingsOpen(false)} onLogout={handleLogout} onUpgrade={() => handleOpenOverlay(setShowPremium)} isDarkMode={isDarkMode} onToggleTheme={handleToggleTheme} /></div>)}
+        {showNotifications && <NotificationsView notifications={notifications} onBack={() => setShowNotifications(false)} />}
+        {showPremium && <PremiumPage user={user} onClose={() => setShowPremium(false)} onUpgrade={async () => { await api.upgradeToPremium(); handleUpdateUser({ isPremium: true }); setShowPremium(false); showToast("Welcome to Gold!"); }} />}
+        {selectedMatch && <ChatInterface match={selectedMatch} currentUser={user} onBack={() => setSelectedMatch(null)} isPremium={user.isPremium} onUpgrade={() => handleOpenOverlay(setShowPremium)} />}
+        {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
       </AnimatePresence>
       {!selectedMatch && !isSettingsOpen && !showPremium && !showNotifications && (activeTab !== 'home' || homeView === 'dashboard') && (<BottomNav activeTab={activeTab} onTabChange={handleTabChange} />)}
     </div>
