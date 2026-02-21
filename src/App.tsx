@@ -364,7 +364,7 @@ const App = () => {
         // Always redirect to the Vercel web app for magic link completion
         const redirectUrl = (window.location.origin && window.location.origin !== 'null')
           ? window.location.origin
-          : 'https://ping-app-ten.vercel.app';
+          : 'https://ping-app-five.vercel.app';
         await api.sendMagicLink(emailToUse, redirectUrl);
         setEmailSent(true);
       } else {
