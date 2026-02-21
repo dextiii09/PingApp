@@ -15,13 +15,19 @@ const firebaseConfig = {
 };
 
 // Check if we have the minimum required config
-export const isConfigured = !!import.meta.env.VITE_FIREBASE_API_KEY;
+export const isConfigured = !!(import.meta.env.VITE_FIREBASE_API_KEY && import.meta.env.VITE_FIREBASE_PROJECT_ID);
 
-let app;
-if (getApps().length === 0 && isConfigured) {
-  app = initializeApp(firebaseConfig);
-} else if (getApps().length > 0) {
-  app = getApps()[0];
+let app = null;
+if (isConfigured) {
+  try {
+    if (getApps().length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+  } catch (err) {
+    console.error("Firebase initialization failed:", err);
+  }
 }
 
 export const auth = app ? getAuth(app) : null;
