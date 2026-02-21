@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react'
 import { User, UserRole, Match, Notification } from './types';
 // Switch to real Firebase service
 import { api } from './services/firebaseService';
+import { isConfigured } from './services/firebaseConfig';
 import { Button } from './components/Button';
 import { GlassCard } from './components/GlassCard';
 import { SwipeDeck } from './components/SwipeDeck';
@@ -403,6 +404,29 @@ const App = () => {
     handleOpenMatch(match);
     refreshData();
   };
+
+  // Environment Variable Check UI
+  if (!isConfigured) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-orange-100">
+          <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <AlertCircle size={32} />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Configuration Missing</h1>
+          <p className="text-gray-600 mb-8 leading-relaxed">
+            Firebase environment variables are not detected. If you've just deployed to Vercel,
+            make sure you added the keys from your <code className="bg-gray-100 px-1.5 py-0.5 rounded text-orange-600">.env.local</code>
+            to the Vercel Project Settings.
+          </p>
+          <div className="space-y-3">
+            <Button onClick={() => window.location.reload()} fullWidth>Check Again</Button>
+            <p className="text-xs text-gray-400">Environment: {import.meta.env.MODE}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (view === 'landing') {
     const isCreator = loginRole === UserRole.INFLUENCER;

@@ -1,8 +1,8 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
-import { getAnalytics } from "firebase/analytics";
+import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,10 +14,28 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-export const analytics = getAnalytics(app);
-export const isConfigured = true;
+// Check if we have the minimum required config
+export const isConfigured = !!import.meta.env.VITE_FIREBASE_API_KEY;
+
+let app;
+if (getApps().length === 0 && isConfigured) {
+  app = initializeApp(firebaseConfig);
+} else if (getApps().length > 0) {
+  app = getApps()[0];
+}
+
+export const auth = app ? getAuth(app) : null;
+export const db = app ? getFirestore(app) : null;
+export const storage = app ? getStorage(app) : null;
+
+// Analytics can fail in many environments (AdBlockers, etc.)
+export let analytics: any = null;
+if (app) {
+  isSupported().then(supported => {
+    if (supported) analytics = getAnalytics(app!);
+  }).catch(() => {
+    console.warn("Firebase Analytics not supported in this environment");
+  });
+}
+
 export default app;
