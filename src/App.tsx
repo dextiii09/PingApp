@@ -104,7 +104,7 @@ const App = () => {
   const [password, setPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [verificationId, setVerificationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
   const [showAuthForm, setShowAuthForm] = useState(false);
@@ -279,19 +279,19 @@ const App = () => {
 
     try {
       if (authMode === 'signup') {
-        if (!confirmationResult) {
+        if (!verificationId) {
           // Send OTP
           if (!phoneNumber || phoneNumber.length < 10) throw new Error("Please enter a valid phone number with country code (e.g. +1234567890)");
-          // The container ID matches the div ID below
-          const result = await api.sendOTP(phoneNumber, 'recaptcha-container');
-          setConfirmationResult(result);
+          // Native call bypassing recaptcha-container
+          const result = await api.sendOTP(phoneNumber);
+          setVerificationId(result.verificationId);
         } else {
           // Verify OTP
           if (!otpCode || otpCode.length < 6) throw new Error("Please enter the 6-digit OTP code");
-          const loggedUser = await api.verifyOTP(confirmationResult, otpCode, loginRole, "Ping User");
+          const loggedUser = await api.verifyOTP(verificationId, otpCode, loginRole, "Ping User");
           setUser(loggedUser);
           setView('app');
-          setConfirmationResult(null); // Reset
+          setVerificationId(null); // Reset
         }
       } else {
         // Normal Email Login
@@ -459,7 +459,7 @@ const App = () => {
                 )}
                 <form onSubmit={handleLogin} className="space-y-5">
                   {authMode === 'signup' ? (
-                    confirmationResult ? (
+                    verificationId ? (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6 space-y-4">
                         <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-pink-100 shadow-sm">
                           <CheckCircle className="text-pink-500" size={32} />
@@ -475,7 +475,7 @@ const App = () => {
                         <Button type="submit" fullWidth className={`h-16 text-lg rounded-full mt-4 shadow-xl shadow-pink-500/20 border-none ${buttonGradient}`}>
                           {isLoading ? 'Verifying...' : 'Verify Code'}
                         </Button>
-                        <Button type="button" onClick={() => setConfirmationResult(null)} variant="ghost" className="mt-2 text-pink-500 hover:bg-pink-50">
+                        <Button type="button" onClick={() => setVerificationId(null)} variant="ghost" className="mt-2 text-pink-500 hover:bg-pink-50">
                           Use a different number
                         </Button>
                       </motion.div>
@@ -515,7 +515,7 @@ const App = () => {
                   <div className="text-center pt-2">
                     <p className="text-sm text-gray-500 font-medium">
                       {authMode === 'signin' ? "Don't have an account?" : "Already have an account?"} {' '}
-                      <button type="button" onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); setAuthError(null); setConfirmationResult(null); }} className="text-gray-900 font-bold hover:underline">
+                      <button type="button" onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); setAuthError(null); setVerificationId(null); }} className="text-gray-900 font-bold hover:underline">
                         {authMode === 'signin' ? 'Sign up with Phone' : 'Log in with Email'}
                       </button>
                     </p>

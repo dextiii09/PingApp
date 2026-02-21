@@ -1,3 +1,4 @@
+
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc,
   query, where, addDoc, onSnapshot, orderBy, limit, writeBatch
@@ -6,9 +7,9 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  ConfirmationResult
+  RecaptchaVerifier, // Keep RecaptchaVerifier for web fallback if needed, but not used in new sendOTP
+  signInWithPhoneNumber, // Keep signInWithPhoneNumber for web fallback if needed, but not used in new sendOTP
+  ConfirmationResult // Keep ConfirmationResult for web fallback if needed, but not used in new verifyOTP
 } from "firebase/auth";
 import {
   ref,
@@ -18,6 +19,7 @@ import {
 import { auth, db, storage, isConfigured } from "./firebaseConfig";
 import { User, UserRole, Match, Message, AdminStats, UserStatus, VerificationStatus, Contract, Notification } from '../types';
 import { MOCK_BUSINESS_USERS, MOCK_INFLUENCER_USERS, PLACEHOLDER_AVATAR, APP_LOGO } from '../constants';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication'; // Added Capacitor FirebaseAuthentication
 
 declare global {
   interface Window {
@@ -180,11 +182,16 @@ class FirebaseService {
     }
   }
 
-  async verifyOTP(confirmationResult: ConfirmationResult, otpCode: string, role?: UserRole, name?: string): Promise<User> {
+  async verifyOTP(verificationId: string, smsCode: string, role?: UserRole, name?: string): Promise<User> {
     this.checkConfig();
     try {
-      const result = await confirmationResult.confirm(otpCode);
-      const uid = result.user.uid;
+      // 1. Build a credential from the Native SDK's verification parameters
+      const { PhoneAuthProvider, signInWithCredential } = await import('firebase/auth');
+      const credential = PhoneAuthProvider.credential(verificationId, smsCode);
+
+      // 2. Transmute the native credential into a JS Web Session
+      const userCredential = await signInWithCredential(auth, credential);
+      const uid = userCredential.user.uid;
       const userDocRef = doc(db, "users", uid);
       const userDoc = await getDoc(userDocRef);
 
@@ -197,7 +204,7 @@ class FirebaseService {
         const newUser: User = {
           id: uid,
           name,
-          email: `${result.user.phoneNumber?.replace('+', '')}@pingapp.phone`, // Fallback email since none exists
+          email: `${userCredential.user.phoneNumber?.replace('+', '')}@pingapp.phone`, // Fallback email
           role,
           avatar: PLACEHOLDER_AVATAR,
           bio: '',
@@ -220,11 +227,10 @@ class FirebaseService {
       localStorage.setItem('ping_session_user', JSON.stringify(this.currentUser));
       return this.currentUser;
     } catch (error) {
-      console.error("Error verifying OTP:", error);
+      console.error("Error verifying native OTP:", error);
       throw error;
     }
   }
-
 
   async logout(): Promise<void> {
     if (isConfigured && auth) {
