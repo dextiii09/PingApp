@@ -10,6 +10,8 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@capacitor/android": "^8.1.0",
+    "@capacitor/core": "^8.1.0",
     "@google/genai": "^1.38.0",
     "@vercel/blob": "^2.0.1",
     "canvas-confetti": "^1.9.4",
@@ -21,6 +23,7 @@
     "recharts": "2.12.2"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.1.0",
     "@tailwindcss/vite": "^4.2.0",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
