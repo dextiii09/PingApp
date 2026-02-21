@@ -21,8 +21,7 @@ import { BottomNav } from './components/BottomNav';
 import { APP_LOGO, PLACEHOLDER_AVATAR } from './constants';
 import { Check, Mail, Lock, ArrowRight, Sparkles, Briefcase, Camera, Globe, TrendingUp, CheckCircle, ChevronLeft, AlertCircle, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-// Toast Component
+import { App as CapApp } from '@capacitor/app';// Toast Component
 const Toast = ({ message, onClose }: { message: string, onClose: () => void }) => {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -137,20 +136,18 @@ const App = () => {
     }
   }, [isDarkMode]);
 
-  // Magic Link Verification — runs once on load to complete passwordless sign-in
+  // Magic Link Verification — handles web loads and Capacitor deep links
   useEffect(() => {
-    const currentUrl = window.location.href;
-    // Check if this page load came from clicking a magic link email
-    if (currentUrl.includes('oobCode') || currentUrl.includes('apiKey')) {
-      const savedEmail = localStorage.getItem('emailForSignIn');
-      const savedRole = localStorage.getItem('pendingUserRole') as UserRole | null;
-      if (savedEmail) {
-        const doVerify = async () => {
+    const processMagicLink = async (url: string) => {
+      if (url.includes('oobCode') || url.includes('apiKey')) {
+        const savedEmail = localStorage.getItem('emailForSignIn');
+        const savedRole = localStorage.getItem('pendingUserRole') as UserRole | null;
+        if (savedEmail) {
           try {
             setIsLoading(true);
             const verifiedUser = await api.verifyMagicLink(
               savedEmail,
-              currentUrl,
+              url,
               savedRole || UserRole.INFLUENCER
             );
             setUser(verifiedUser);
@@ -164,10 +161,28 @@ const App = () => {
           } finally {
             setIsLoading(false);
           }
-        };
-        doVerify();
+        }
       }
+    };
+
+    // 1. Check initial web load (or cold start intent)
+    processMagicLink(window.location.href);
+
+    // 2. Listen for deep links when app is running (Capacitor Android/iOS)
+    let appListener: any;
+    try {
+      appListener = CapApp.addListener('appUrlOpen', data => {
+        processMagicLink(data.url);
+      });
+    } catch (e) {
+      console.warn("Capacitor App plugin not available for deep links", e);
     }
+
+    return () => {
+      if (appListener) {
+        appListener.then((l: any) => l.remove()).catch(console.error);
+      }
+    };
   }, []);
 
   // Real-time Matches Subscription
