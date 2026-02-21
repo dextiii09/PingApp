@@ -137,6 +137,39 @@ const App = () => {
     }
   }, [isDarkMode]);
 
+  // Magic Link Verification — runs once on load to complete passwordless sign-in
+  useEffect(() => {
+    const currentUrl = window.location.href;
+    // Check if this page load came from clicking a magic link email
+    if (currentUrl.includes('oobCode') || currentUrl.includes('apiKey')) {
+      const savedEmail = localStorage.getItem('emailForSignIn');
+      const savedRole = localStorage.getItem('pendingUserRole') as UserRole | null;
+      if (savedEmail) {
+        const doVerify = async () => {
+          try {
+            setIsLoading(true);
+            const verifiedUser = await api.verifyMagicLink(
+              savedEmail,
+              currentUrl,
+              savedRole || UserRole.INFLUENCER
+            );
+            setUser(verifiedUser);
+            setView(verifiedUser.role === UserRole.ADMIN ? 'admin' : 'app');
+            localStorage.removeItem('emailForSignIn');
+            localStorage.removeItem('pendingUserRole');
+          } catch (err: any) {
+            console.error('Magic link verification failed:', err);
+            setAuthError('Magic link sign-in failed. Please try again.');
+            setView('login');
+          } finally {
+            setIsLoading(false);
+          }
+        };
+        doVerify();
+      }
+    }
+  }, []);
+
   // Real-time Matches Subscription
   useEffect(() => {
     if (user && user.id && view === 'app') {
@@ -327,7 +360,12 @@ const App = () => {
       let loggedUser;
       if (authMode === 'signup') {
         localStorage.setItem('pendingUserRole', loginRole);
-        await api.sendMagicLink(emailToUse, window.location.origin);
+        // On Android file:// protocol, window.location.origin is 'null'
+        // Always redirect to the Vercel web app for magic link completion
+        const redirectUrl = (window.location.origin && window.location.origin !== 'null')
+          ? window.location.origin
+          : 'https://ping-app-ten.vercel.app';
+        await api.sendMagicLink(emailToUse, redirectUrl);
         setEmailSent(true);
       } else {
         loggedUser = await api.login(loginRole, emailToUse, passToUse);
