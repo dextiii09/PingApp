@@ -48,12 +48,11 @@ jobs:
         VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
-    # Copy web assets directly instead of using cap sync (avoids SDK tooling issues)
+    # Copy web assets directly into Android assets root (matches MainActivity loadUrl path)
     - name: Copy web assets to Android
       run: |
         rm -rf android/app/src/main/assets/public
-        mkdir -p android/app/src/main/assets/public
-        cp -r dist/. android/app/src/main/assets/public/
+        cp -r dist/. android/app/src/main/assets/
 
     # ── Gradle Build ─────────────────────────────────────────────────────────
     - name: Remove local Gradle wrapper (avoids missing JAR errors)
