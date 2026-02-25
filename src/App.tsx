@@ -19,7 +19,7 @@ import { NotificationsView } from './components/NotificationsView';
 import { BottomNav } from './components/BottomNav';
 // Add PLACEHOLDER_AVATAR to imports from constants
 import { APP_LOGO, PLACEHOLDER_AVATAR } from './constants';
-import { Check, Mail, Lock, ArrowRight, Sparkles, Briefcase, Camera, Globe, TrendingUp, CheckCircle, ChevronLeft, AlertCircle, Zap } from 'lucide-react';
+import { Check, Mail, Lock, ArrowRight, Sparkles, Briefcase, Camera, Globe, TrendingUp, CheckCircle, ChevronLeft, AlertCircle, Zap, Search, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { App as CapApp } from '@capacitor/app';// Toast Component
 const Toast = ({ message, onClose }: { message: string, onClose: () => void }) => {
@@ -578,25 +578,65 @@ const App = () => {
           </AnimatePresence>
         )}
         {activeTab === 'matches' && (
-          <div className="h-full w-full flex flex-col p-4 pt-10 overflow-y-auto pb-32">
-            <h2 className="text-2xl font-bold mb-6 px-2">Matches & Messages</h2>
-            {matches.length === 0 ? (<div className="flex-1 flex flex-col items-center justify-center text-white/30"><p>No matches yet. Go swipe!</p></div>) : (
-              <div className="space-y-2">
-                {matches.map(match => (
-                  <GlassCard key={match.id} onClick={() => handleOpenMatch(match)} className="flex items-center gap-4 p-4 cursor-pointer" intensity="low" hoverEffect={true}>
-                    <img src={match.userProfile?.avatar || PLACEHOLDER_AVATAR} className="w-12 h-12 rounded-full object-cover" alt="" />
-                    <div className="flex-1">
-                      <h3 className="font-bold text-sm">{match.userProfile?.name || "Match"}</h3>
-                      <p className="text-xs text-white/50 truncate">
-                        {match.lastSenderId === user.id ? "You: " : ""}
-                        {match.lastMessage || 'Start a conversation...'}
-                      </p>
+          <div className={`h-full w-full flex flex-col overflow-y-auto pb-32 transition-colors duration-300 ${isDarkMode ? 'bg-[#050505]' : 'bg-[#f8f9fa]'}`}>
+            <div className={`px-6 pt-14 pb-6 sticky top-0 z-20 backdrop-blur-3xl ${isDarkMode ? 'bg-[#050505]/80' : 'bg-[#f8f9fa]/80'}`}>
+              <h2 className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Messages</h2>
+              <div className={`mt-6 flex items-center px-4 py-3.5 rounded-2xl ${isDarkMode ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-gray-200 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-900'} transition-all`}>
+                <Search size={20} className={isDarkMode ? 'text-white/40' : 'text-gray-400'} />
+                <input 
+                  type="text" 
+                  placeholder="Search matches..." 
+                  className={`bg-transparent border-none outline-none w-full ml-3 text-sm font-semibold placeholder:text-gray-400 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
+                />
+              </div>
+            </div>
+
+            {matches.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 mt-4 animate-in fade-in zoom-in duration-500">
+                <div className={`w-28 h-28 rounded-full flex items-center justify-center mb-8 shadow-2xl ${isDarkMode ? 'bg-white/5 border border-white/10 shadow-black/50' : 'bg-white border border-pink-100 shadow-pink-500/10'}`}>
+                  <MessageCircle size={48} className={isDarkMode ? 'text-white/20' : 'text-pink-300'} />
+                </div>
+                <h3 className={`text-2xl font-black mb-3 text-center tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No messages yet</h3>
+                <p className={`text-center text-sm max-w-[280px] leading-relaxed font-bold mb-10 ${isDarkMode ? 'text-white/40' : 'text-gray-400'}`}>
+                  When you match with someone, you'll be able to send them a message here.
+                </p>
+                <Button onClick={() => { setActiveTab('home'); setHomeView('deck'); }} className="h-14 w-56 rounded-full shadow-2xl shadow-pink-500/20 bg-gradient-to-r from-pink-500 to-orange-400 border-none text-white text-lg font-bold">
+                  Find Matches <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex-1 px-4 mt-2">
+                <div className="flex items-center justify-between mb-4 px-2">
+                  <h3 className={`text-xs font-black uppercase tracking-widest ${isDarkMode ? 'text-white/50' : 'text-gray-400'}`}>Recent Conversations</h3>
+                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${isDarkMode ? 'bg-pink-500/20 text-pink-400' : 'bg-pink-100 text-pink-600'}`}>
+                    {matches.length} Matches
+                  </span>
+                </div>
+                
+                <div className="space-y-4">
+                  {matches.map(match => (
+                    <div key={match.id} onClick={() => handleOpenMatch(match)} className={`flex items-center gap-4 p-4 cursor-pointer rounded-3xl transition-all duration-300 group ${isDarkMode ? 'bg-white/5 hover:bg-white/10 border border-white/5' : 'bg-white border border-gray-100 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_12px_40px_-4px_rgba(236,72,153,0.15)] hover:border-pink-200'} relative overflow-hidden`}>
+                      <div className="relative">
+                        <img src={match.userProfile?.avatar || PLACEHOLDER_AVATAR} className="w-16 h-16 rounded-full object-cover shadow-sm ring-4 ring-transparent group-hover:ring-pink-500/10 transition-all duration-500" alt="" />
+                        <div className={`absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 rounded-full ${isDarkMode ? 'border-[#121212]' : 'border-white'}`}></div>
+                      </div>
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="flex justify-between items-center mb-1.5">
+                          <h3 className={`font-black text-lg truncate pr-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900 group-hover:text-pink-600 transition-colors'}`}>
+                            {match.userProfile?.name || "Match"}
+                          </h3>
+                          <span className={`text-[10px] font-extrabold uppercase tracking-wide whitespace-nowrap ${isDarkMode ? 'text-white/30' : 'text-gray-400'}`}>
+                            {new Date(match.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className={`text-sm truncate ${isDarkMode ? 'text-white/50' : 'text-gray-500 font-bold'}`}>
+                          {match.lastSenderId === user.id ? "You: " : ""}
+                          {match.lastMessage || 'Start a conversation...'}
+                        </p>
+                      </div>
                     </div>
-                    <span className="text-[10px] text-white/30">
-                      {new Date(match.lastActive).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </GlassCard>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
