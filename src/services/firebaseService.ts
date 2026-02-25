@@ -396,8 +396,12 @@ class FirebaseService {
         lastMessage: '',
         lastSenderId: ''
       };
-
       await setDoc(doc(db, "matches", matchId), newMatch);
+
+      // Real-time Push Notifications for Match
+      await this.createNotification(userId, 'match', "New Match!", `You matched with ${candidateProfile.name}.`);
+      await this.createNotification(candidateId, 'match', "New Match!", `You matched with ${this.currentUser?.name || "Someone"}.`);
+
       return { isMatch: true, match: newMatch };
     }
     return { isMatch: false };
@@ -497,7 +501,50 @@ class FirebaseService {
 
   // --- NOTIFICATIONS & LIKES ---
 
-  async getNotifications(): Promise<Notification[]> { return []; }
+  async createNotification(userId: string, type: 'match' | 'message' | 'system' | 'tip', title: string, text: string) {
+    if (!isConfigured || !db) return;
+    try {
+      const ref = collection(db, "users", userId, "notifications");
+      await addDoc(ref, {
+        type,
+        title,
+        text,
+        timestamp: Date.now(),
+        read: false
+      });
+    } catch (e) { console.error("Notification creation failed", e); }
+  }
+
+  async getNotifications(): Promise<Notification[]> {
+    if (!this.currentUser || !isConfigured || !db) return [];
+    try {
+      const q = query(
+        collection(db, "users", this.currentUser.id, "notifications"),
+        orderBy("timestamp", "desc"),
+        limit(50)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(d => ({ ...d.data(), id: d.id } as Notification));
+    } catch (e) {
+      console.error("Failed to fetch notifications:", e);
+      return [];
+    }
+  }
+
+  async markNotificationsAsRead(): Promise<void> {
+    if (!this.currentUser || !isConfigured || !db) return;
+    try {
+      const q = query(collection(db, "users", this.currentUser.id, "notifications"), where("read", "==", false));
+      const snap = await getDocs(q);
+      if (snap.empty) return;
+
+      const batch = writeBatch(db);
+      snap.forEach(d => {
+        batch.update(d.ref, { read: true });
+      });
+      await batch.commit();
+    } catch (e) { console.error(e); }
+  }
 
   async getNewLikesCount(): Promise<number> {
     if (!this.currentUser || !isConfigured || !db) return 0;
@@ -554,7 +601,7 @@ class FirebaseService {
 
   async getAnalyticsStats(userId: string): Promise<{ profileViews: number; matchRate: number; chartData: { day: string, value: number }[]; recentActivity: any[] }> {
     const fallback = { profileViews: 0, matchRate: 0, chartData: [], recentActivity: [] };
-    if (!isConfigured || !db || userId.startsWith('test-')) return fallback;
+    if (!isConfigured || !db) return fallback;
 
     try {
       // 1. Profile Views (Total received swipes)
@@ -571,15 +618,14 @@ class FirebaseService {
 
       const matchRate = totalSwipesPerformed > 0 ? Math.round((totalMatches / totalSwipesPerformed) * 100) : 0;
 
-      // 3. Activity Chart (Group last 7 days)
+      // 3. Activity Chart (Group last 7 days of received swipes)
       const now = Date.now();
       const msPerDay = 86400000;
       const chartMap = new Map<string, number>();
 
-      // Initialize past 7 days with 0
+      // Initialize past 7 days with 0 (ordered oldest to newest for the chart)
       for (let i = 6; i >= 0; i--) {
         const d = new Date(now - i * msPerDay);
-        // use short weekday name e.g. 'Mon', 'Tue'
         chartMap.set(d.toLocaleDateString('en-US', { weekday: 'short' }), 0);
       }
 
@@ -594,7 +640,6 @@ class FirebaseService {
               chartMap.set(dayStr, (chartMap.get(dayStr) || 0) + 1);
             }
           }
-          // Grab the 2 most recent for the activity feed
           recentActivity.push(data);
         }
       });
