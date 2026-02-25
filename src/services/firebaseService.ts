@@ -726,6 +726,42 @@ class FirebaseService {
     this.currentUser.isPremium = true;
   }
 
+  async adminBroadcastNotification(title: string, text: string): Promise<void> {
+    this.checkConfig();
+    try {
+      const usersSnap = await getDocs(collection(db, "users"));
+      // Firestore batches have a 500 operation limit. We chunk them if needed.
+      const chunks = [];
+      let currentBatch = writeBatch(db);
+      let opCount = 0;
+
+      usersSnap.docs.forEach((userDoc) => {
+        if (opCount >= 490) {
+          chunks.push(currentBatch.commit());
+          currentBatch = writeBatch(db);
+          opCount = 0;
+        }
+        const notifRef = doc(collection(db, "users", userDoc.id, "notifications"));
+        currentBatch.set(notifRef, {
+          type: 'system',
+          title,
+          text,
+          timestamp: Date.now(),
+          read: false
+        });
+        opCount++;
+      });
+
+      if (opCount > 0) {
+        chunks.push(currentBatch.commit());
+      }
+      await Promise.all(chunks);
+    } catch (e) {
+      console.error("Broadcast failed:", e);
+      throw e;
+    }
+  }
+
   async seedDatabase(): Promise<void> {
     this.checkConfig();
     const batch = writeBatch(db);

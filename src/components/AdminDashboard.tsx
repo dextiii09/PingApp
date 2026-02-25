@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { User, UserRole, UserStatus, VerificationStatus, AdminStats } from '../types';
 import { api } from '../services/firebaseService';
 import { Button } from './Button';
-import { 
-  LayoutDashboard, Users, ShieldAlert, BarChart3, CheckCircle, XCircle, 
+import {
+  LayoutDashboard, Users, ShieldAlert, BarChart3, CheckCircle, XCircle,
   Search, Filter, MoreVertical, Eye, EyeOff, Ban, Trash2, FileText, Check, X,
-  MessageSquare, AlertTriangle, Terminal, ChevronDown, Loader2, ShieldCheck, Briefcase, Database
+  MessageSquare, AlertTriangle, Terminal, ChevronDown, Loader2, ShieldCheck, Briefcase, Database, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { APP_LOGO } from '../constants';
@@ -13,11 +13,11 @@ import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 
 // --- SUB-COMPONENTS ---
 
-const StatCard: React.FC<{ 
-  label: string; 
-  value: string | number; 
-  trend?: string; 
-  subLabel?: string; 
+const StatCard: React.FC<{
+  label: string;
+  value: string | number;
+  trend?: string;
+  subLabel?: string;
   color: 'cyan' | 'purple' | 'green' | 'yellow';
   data?: { value: number }[];
 }> = ({ label, value, trend, subLabel, color, data }) => {
@@ -34,7 +34,7 @@ const StatCard: React.FC<{
     <div className={`relative overflow-hidden group bg-black/40 border border-white/10 rounded-xl h-40 flex flex-col justify-between shadow-lg`}>
       {/* Background Blob */}
       <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl -mr-10 -mt-10 transition-all opacity-50 ${styles.blob} ${styles.hover}`} />
-      
+
       {/* Content Layer */}
       <div className="relative z-20 p-5 h-full flex flex-col justify-start">
         <h3 className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-1">{label}</h3>
@@ -52,17 +52,17 @@ const StatCard: React.FC<{
             <AreaChart data={data} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id={`gradient-${color}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={styles.stroke} stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor={styles.stroke} stopOpacity={0}/>
+                  <stop offset="5%" stopColor={styles.stroke} stopOpacity={0.8} />
+                  <stop offset="95%" stopColor={styles.stroke} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <Area 
-                type="monotone" 
-                dataKey="value" 
-                stroke={styles.stroke} 
-                strokeWidth={2} 
-                fillOpacity={1} 
-                fill={`url(#gradient-${color})`} 
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke={styles.stroke}
+                strokeWidth={2}
+                fillOpacity={1}
+                fill={`url(#gradient-${color})`}
                 isAnimationActive={true}
               />
             </AreaChart>
@@ -82,7 +82,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     VERIFIED: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
     UNVERIFIED: "bg-white/5 text-white/40 border-white/10"
   };
-  
+
   const style = styles[status] || styles.UNVERIFIED;
 
   return (
@@ -96,7 +96,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 
 const MessageInspectorModal: React.FC<{ user: User | null; onClose: () => void; onBan: (userId: string) => void }> = ({ user, onClose, onBan }) => {
   if (!user) return null;
-  
+
   const logs: any[] = []; // No mock logs by default
 
   return (
@@ -114,31 +114,31 @@ const MessageInspectorModal: React.FC<{ user: User | null; onClose: () => void; 
         </div>
         <div className="p-4 h-96 overflow-y-auto space-y-3 font-mono text-xs bg-black/50">
           {logs.length === 0 ? (
-             <div className="flex items-center justify-center h-full text-white/30 italic">No recent message logs found for this user.</div>
+            <div className="flex items-center justify-center h-full text-white/30 italic">No recent message logs found for this user.</div>
           ) : (
             logs.map(log => (
-                <div key={log.id} className={`flex gap-3 ${log.type === 'alert' ? 'bg-red-500/10 border border-red-500/20 p-2 rounded' : ''}`}>
+              <div key={log.id} className={`flex gap-3 ${log.type === 'alert' ? 'bg-red-500/10 border border-red-500/20 p-2 rounded' : ''}`}>
                 <span className="text-white/30 shrink-0 w-16">{log.time}</span>
                 <div className="flex-1">
-                    <span className={`font-bold mr-2 ${log.sender === 'System' ? 'text-red-400' : 'text-cyan-400'}`}>[{log.sender}]:</span>
-                    <span className={log.risk === 'high' ? 'text-red-300' : 'text-white/70'}>{log.text}</span>
+                  <span className={`font-bold mr-2 ${log.sender === 'System' ? 'text-red-400' : 'text-cyan-400'}`}>[{log.sender}]:</span>
+                  <span className={log.risk === 'high' ? 'text-red-300' : 'text-white/70'}>{log.text}</span>
                 </div>
-                </div>
+              </div>
             ))
           )}
         </div>
         <div className="p-3 border-t border-white/10 bg-white/5 flex justify-end gap-2">
-           <Button variant="ghost" onClick={onClose} className="h-8 text-xs">Close</Button>
-           <Button 
-             variant="primary" 
-             className="h-8 text-xs bg-red-600 hover:bg-red-700 border-none shadow-none text-white"
-             onClick={() => {
-               onBan(user.id);
-               onClose();
-             }}
-           >
-             Ban User
-           </Button>
+          <Button variant="ghost" onClick={onClose} className="h-8 text-xs">Close</Button>
+          <Button
+            variant="primary"
+            className="h-8 text-xs bg-red-600 hover:bg-red-700 border-none shadow-none text-white"
+            onClick={() => {
+              onBan(user.id);
+              onClose();
+            }}
+          >
+            Ban User
+          </Button>
         </div>
       </div>
     </div>
@@ -161,10 +161,10 @@ const RejectionModal: React.FC<{ user: User | null; onClose: () => void; onConfi
           <div className="space-y-2">
             {reasons.map(r => (
               <label key={r} className="flex items-center gap-3 p-3 rounded border border-white/10 hover:bg-white/5 cursor-pointer transition-colors">
-                <input 
-                  type="radio" 
-                  name="reason" 
-                  checked={selectedReason === r} 
+                <input
+                  type="radio"
+                  name="reason"
+                  checked={selectedReason === r}
                   onChange={() => setSelectedReason(r)}
                   className="accent-red-500"
                 />
@@ -176,6 +176,73 @@ const RejectionModal: React.FC<{ user: User | null; onClose: () => void; onConfi
         <div className="p-4 border-t border-white/10 flex justify-end gap-3">
           <Button variant="ghost" onClick={onClose} className="h-9">Cancel</Button>
           <Button onClick={() => onConfirm(selectedReason)} className="h-9 bg-red-500 hover:bg-red-600 border-none text-white shadow-none">Confirm Rejection</Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const BroadcastModal: React.FC<{ onClose: () => void; onBroadcast: (title: string, text: string) => Promise<void> }> = ({ onClose, onBroadcast }) => {
+  const [title, setTitle] = useState('');
+  const [text, setText] = useState('');
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!title || !text) return;
+    setIsSending(true);
+    try {
+      await onBroadcast(title, text);
+      onClose();
+    } catch (e) {
+      console.error(e);
+      setIsSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="w-full max-w-lg bg-[#09090b] border border-cyan-500/30 rounded-xl shadow-[0_0_50px_rgba(6,182,212,0.1)]">
+        <div className="p-4 border-b border-white/10 flex justify-between items-center bg-cyan-500/5">
+          <div className="flex items-center gap-3">
+            <Terminal className="text-cyan-400" size={20} />
+            <h3 className="font-mono text-sm font-bold text-white">GLOBAL_BROADCAST_SYSTEM</h3>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-white/10 rounded text-white/60 hover:text-white"><X size={20} /></button>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-white/70 font-mono">This will send an instant push notification to ALL registered users.</p>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[10px] text-cyan-400 font-mono mb-1 tracking-widest block">NOTIFICATION_TITLE</label>
+              <input
+                autoFocus
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                className="w-full bg-black/50 border border-white/10 rounded p-3 text-white font-mono text-sm focus:border-cyan-500 focus:outline-none transition-colors"
+                placeholder="e.g. SYSTEM UPDATE"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-cyan-400 font-mono mb-1 tracking-widest block">MESSAGE_BODY</label>
+              <textarea
+                value={text}
+                onChange={e => setText(e.target.value)}
+                className="w-full bg-black/50 border border-white/10 rounded p-3 text-white font-mono text-sm focus:border-cyan-500 focus:outline-none transition-colors h-32 resize-none"
+                placeholder="Enter broadcast message here..."
+              />
+            </div>
+          </div>
+        </div>
+        <div className="p-4 border-t border-white/10 flex justify-end gap-3 bg-white/5">
+          <Button variant="ghost" onClick={onClose} className="h-9">ABORT</Button>
+          <Button
+            onClick={handleSend}
+            disabled={!title || !text || isSending}
+            className="h-9 bg-cyan-600 hover:bg-cyan-500 text-white font-mono uppercase tracking-widest border-none disabled:opacity-50 flex items-center gap-2"
+          >
+            {isSending ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+            {isSending ? 'TRANSMITTING...' : 'EXECUTE_BROADCAST'}
+          </Button>
         </div>
       </div>
     </div>
@@ -198,11 +265,12 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSeeding, setIsSeeding] = useState(false);
-  
+
   // Selection & Actions
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [inspectingUser, setInspectingUser] = useState<User | null>(null);
   const [rejectingUser, setRejectingUser] = useState<User | null>(null);
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
 
   // Filters
   const [roleFilter, setRoleFilter] = useState<'ALL' | UserRole>('ALL');
@@ -236,7 +304,7 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   };
 
   const handleSeed = async () => {
-    if(!window.confirm("This will inject mock data into Firestore. Continue?")) return;
+    if (!window.confirm("This will inject mock data into Firestore. Continue?")) return;
     setIsSeeding(true);
     await api.seedDatabase();
     await loadData();
@@ -244,9 +312,9 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   };
 
   const handleVerify = async (userId: string, approved: boolean, reason?: string) => {
-    setUsers(prev => prev.map(u => 
-      u.id === userId 
-        ? { ...u, verificationStatus: approved ? VerificationStatus.VERIFIED : VerificationStatus.REJECTED } 
+    setUsers(prev => prev.map(u =>
+      u.id === userId
+        ? { ...u, verificationStatus: approved ? VerificationStatus.VERIFIED : VerificationStatus.REJECTED }
         : u
     ));
     await api.verifyUser(userId, approved);
@@ -260,9 +328,9 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   };
 
   const handleShadowBan = async (userId: string) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { 
-      ...u, 
-      status: u.status === UserStatus.SHADOW_BANNED ? UserStatus.ACTIVE : UserStatus.SHADOW_BANNED 
+    setUsers(prev => prev.map(u => u.id === userId ? {
+      ...u,
+      status: u.status === UserStatus.SHADOW_BANNED ? UserStatus.ACTIVE : UserStatus.SHADOW_BANNED
     } : u));
     // Mock API call would go here
   };
@@ -278,8 +346,8 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
   };
 
   // Filtering Logic
-  let filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  let filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -303,9 +371,9 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
 
   return (
     <div className="flex h-screen w-screen bg-[#050505] text-white font-sans overflow-hidden">
-      
+
       {/* SIDEBAR */}
-      <motion.div 
+      <motion.div
         initial={{ x: -50, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         className="w-20 lg:w-64 border-r border-white/5 flex flex-col bg-black z-20"
@@ -347,214 +415,222 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
         </nav>
 
         <div className="p-4 border-t border-white/5 space-y-2">
-           <button 
-             onClick={handleSeed} 
-             disabled={isSeeding}
-             className="flex items-center gap-3 px-4 py-3 text-orange-500/60 hover:text-orange-500 hover:bg-orange-500/10 w-full rounded-lg transition-colors font-mono text-xs border border-transparent hover:border-orange-500/20"
-           >
-             {isSeeding ? <Loader2 size={16} className="animate-spin" /> : <Database size={16} />}
-             <span className="hidden lg:block">{isSeeding ? 'SEEDING...' : 'SEED_DATABASE'}</span>
-           </button>
+          <button
+            onClick={() => setShowBroadcastModal(true)}
+            className="flex items-center gap-3 px-4 py-3 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 w-full rounded-lg transition-colors font-mono text-xs border border-transparent hover:border-cyan-500/20"
+          >
+            <Zap size={16} />
+            <span className="hidden lg:block">GLOBAL_BROADCAST</span>
+          </button>
 
-           <button onClick={onLogout} className="flex items-center gap-3 px-4 py-3 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 w-full rounded-lg transition-colors font-mono text-xs border border-transparent hover:border-red-500/20">
-             <Ban size={16} />
-             <span className="hidden lg:block">TERMINATE_SESSION</span>
-           </button>
+          <button
+            onClick={handleSeed}
+            disabled={isSeeding}
+            className="flex items-center gap-3 px-4 py-3 text-orange-500/60 hover:text-orange-500 hover:bg-orange-500/10 w-full rounded-lg transition-colors font-mono text-xs border border-transparent hover:border-orange-500/20"
+          >
+            {isSeeding ? <Loader2 size={16} className="animate-spin" /> : <Database size={16} />}
+            <span className="hidden lg:block">{isSeeding ? 'SEEDING...' : 'SEED_DATABASE'}</span>
+          </button>
+
+          <button onClick={onLogout} className="flex items-center gap-3 px-4 py-3 text-red-500/60 hover:text-red-500 hover:bg-red-500/10 w-full rounded-lg transition-colors font-mono text-xs border border-transparent hover:border-red-500/20">
+            <Ban size={16} />
+            <span className="hidden lg:block">TERMINATE_SESSION</span>
+          </button>
         </div>
-      </motion.div>
+      </motion.div >
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 flex flex-col h-full relative overflow-hidden bg-[#0a0a0a]">
+      < div className="flex-1 flex flex-col h-full relative overflow-hidden bg-[#0a0a0a]" >
         {/* Cyber Grid Background */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+        < div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px]" ></div >
         <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black pointer-events-none"></div>
 
         {/* Header */}
         <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-black/60 backdrop-blur-md z-10 shrink-0">
-           <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 text-[10px] font-mono text-white/30">
-                 <span className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-500 animate-bounce' : 'bg-green-500 animate-pulse'}`}></span>
-                 SYSTEM STATUS: {isLoading ? 'LOADING_RESOURCES' : 'ONLINE'}
-              </div>
-              <div className="h-4 w-px bg-white/10"></div>
-              <div className="text-[10px] font-mono text-white/30">
-                 LATENCY: 24ms
-              </div>
-           </div>
-           
-           <div className="flex items-center gap-4">
-              {/* Optional secondary search for overview, though main Search is inside Users view */}
-           </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-[10px] font-mono text-white/30">
+              <span className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-500 animate-bounce' : 'bg-green-500 animate-pulse'}`}></span>
+              SYSTEM STATUS: {isLoading ? 'LOADING_RESOURCES' : 'ONLINE'}
+            </div>
+            <div className="h-4 w-px bg-white/10"></div>
+            <div className="text-[10px] font-mono text-white/30">
+              LATENCY: 24ms
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Optional secondary search for overview, though main Search is inside Users view */}
+          </div>
         </header>
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-8 relative z-0 no-scrollbar">
-          
-          {isLoading ? (
-             <div className="flex flex-col items-center justify-center h-full text-cyan-500/50 space-y-4">
-                <Loader2 size={40} className="animate-spin" />
-                <p className="font-mono text-xs tracking-widest animate-pulse">ESTABLISHING UPLINK...</p>
-             </div>
-          ) : (
-          <AnimatePresence mode="wait">
-            
-            {/* OVERVIEW */}
-            {activeView === 'overview' && stats && (
-              <motion.div 
-                key="overview"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="space-y-6"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <StatCard 
-                    label="Total Users" 
-                    value={stats.totalUsers} 
-                    trend="+12.5%" 
-                    subLabel={`${stats.split.business} BIZ / ${stats.split.influencer} INF`} 
-                    color="cyan" 
-                    data={sparklines.users}
-                  />
-                  <StatCard 
-                    label="Monthly Revenue" 
-                    value={`₹${stats.revenue.toLocaleString()}`} 
-                    trend="+8.2%" 
-                    subLabel="STRIPE VOL" 
-                    color="purple" 
-                    data={sparklines.revenue}
-                  />
-                  <StatCard 
-                    label="Active Matches" 
-                    value={stats.activeMatches} 
-                    trend="+24 today" 
-                    subLabel="CONVERSATIONS" 
-                    color="green" 
-                    data={sparklines.matches}
-                  />
-                  <StatCard 
-                    label="Verification Q" 
-                    value={stats.pendingVerifications} 
-                    subLabel="REQUIRES ACTION" 
-                    color="yellow" 
-                    data={sparklines.verifications}
-                  />
-                </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                   {/* Main Chart Placeholder */}
-                   <div className="lg:col-span-2 p-6 min-h-[400px] flex flex-col bg-black/40 border border-white/10 rounded-xl relative overflow-hidden">
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-full text-cyan-500/50 space-y-4">
+              <Loader2 size={40} className="animate-spin" />
+              <p className="font-mono text-xs tracking-widest animate-pulse">ESTABLISHING UPLINK...</p>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+
+              {/* OVERVIEW */}
+              {activeView === 'overview' && stats && (
+                <motion.div
+                  key="overview"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard
+                      label="Total Users"
+                      value={stats.totalUsers}
+                      trend="+12.5%"
+                      subLabel={`${stats.split.business} BIZ / ${stats.split.influencer} INF`}
+                      color="cyan"
+                      data={sparklines.users}
+                    />
+                    <StatCard
+                      label="Monthly Revenue"
+                      value={`₹${stats.revenue.toLocaleString()}`}
+                      trend="+8.2%"
+                      subLabel="STRIPE VOL"
+                      color="purple"
+                      data={sparklines.revenue}
+                    />
+                    <StatCard
+                      label="Active Matches"
+                      value={stats.activeMatches}
+                      trend="+24 today"
+                      subLabel="CONVERSATIONS"
+                      color="green"
+                      data={sparklines.matches}
+                    />
+                    <StatCard
+                      label="Verification Q"
+                      value={stats.pendingVerifications}
+                      subLabel="REQUIRES ACTION"
+                      color="yellow"
+                      data={sparklines.verifications}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Main Chart Placeholder */}
+                    <div className="lg:col-span-2 p-6 min-h-[400px] flex flex-col bg-black/40 border border-white/10 rounded-xl relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-purple-500 opacity-50"></div>
                       <div className="flex items-center justify-between mb-8">
                         <h3 className="font-mono font-bold text-sm text-white">GROWTH_METRICS</h3>
                         <div className="flex gap-1">
-                           {['1D', '1W', '1M', '1Y'].map(t => (
-                             <button key={t} className="text-[10px] font-mono px-3 py-1 rounded-sm bg-white/5 hover:bg-cyan-500/20 hover:text-cyan-400 border border-transparent hover:border-cyan-500/30 transition-all text-white/50">{t}</button>
-                           ))}
+                          {['1D', '1W', '1M', '1Y'].map(t => (
+                            <button key={t} className="text-[10px] font-mono px-3 py-1 rounded-sm bg-white/5 hover:bg-cyan-500/20 hover:text-cyan-400 border border-transparent hover:border-cyan-500/30 transition-all text-white/50">{t}</button>
+                          ))}
                         </div>
                       </div>
                       <div className="flex-1 flex items-end gap-1 px-2 border-b border-white/5 pb-2">
-                         {[30, 45, 35, 60, 55, 70, 85, 80, 95, 100, 90, 110, 95, 105, 115, 120].map((h, i) => (
-                           <div key={i} className="flex-1 bg-cyan-500/20 hover:bg-cyan-400/80 transition-all duration-300 relative group" style={{ height: `${h * 0.7}%` }}>
-                              <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-[9px] px-2 py-1 border border-cyan-500/30 text-cyan-400 font-mono whitespace-nowrap z-10 pointer-events-none">
-                                DATA: {h * 12}
-                              </div>
-                           </div>
-                         ))}
+                        {[30, 45, 35, 60, 55, 70, 85, 80, 95, 100, 90, 110, 95, 105, 115, 120].map((h, i) => (
+                          <div key={i} className="flex-1 bg-cyan-500/20 hover:bg-cyan-400/80 transition-all duration-300 relative group" style={{ height: `${h * 0.7}%` }}>
+                            <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-[9px] px-2 py-1 border border-cyan-500/30 text-cyan-400 font-mono whitespace-nowrap z-10 pointer-events-none">
+                              DATA: {h * 12}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                   </div>
+                    </div>
 
-                   {/* Activity Feed */}
-                   <div className="bg-black/40 border border-white/10 rounded-xl overflow-hidden flex flex-col">
+                    {/* Activity Feed */}
+                    <div className="bg-black/40 border border-white/10 rounded-xl overflow-hidden flex flex-col">
                       <div className="p-4 border-b border-white/10 bg-white/5 flex justify-between items-center">
                         <h3 className="font-mono font-bold text-sm text-white">SYSTEM_LOGS</h3>
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                       </div>
                       <div className="flex-1 p-0 overflow-y-auto font-mono text-xs">
-                         {[1,2,3,4,5,6,7,8].map(i => (
-                           <div key={i} className="flex items-start gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-default">
-                             <span className="text-white/30 text-[10px] mt-0.5">09:4{i}:12</span>
-                             <div>
-                               <p className="text-white/80">User <span className="text-cyan-400">#8392</span> verified.</p>
-                               <p className="text-[9px] text-white/30 mt-0.5">ADMIN_ACTION • IP 192.168.1.{i}</p>
-                             </div>
-                           </div>
-                         ))}
-                      </div>
-                   </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* USERS TABLE */}
-            {activeView === 'users' && (
-              <motion.div
-                key="users"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="h-full flex flex-col"
-              >
-                 <div className="flex-1 overflow-hidden flex flex-col bg-black/40 border border-white/10 rounded-xl">
-                    <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
-                       <div className="flex items-center gap-4">
-                          <h3 className="font-mono font-bold text-sm tracking-widest text-white">DATABASE_RECORDS</h3>
-                          <div className="relative">
-                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={12} />
-                             <input 
-                                type="text" 
-                                value={searchQuery} 
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search user or email..." 
-                                className="bg-black/50 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-cyan-500/50 w-56 transition-colors placeholder:text-white/20" 
-                             />
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                          <div key={i} className="flex items-start gap-3 p-3 border-b border-white/5 hover:bg-white/5 transition-colors cursor-default">
+                            <span className="text-white/30 text-[10px] mt-0.5">09:4{i}:12</span>
+                            <div>
+                              <p className="text-white/80">User <span className="text-cyan-400">#8392</span> verified.</p>
+                              <p className="text-[9px] text-white/30 mt-0.5">ADMIN_ACTION • IP 192.168.1.{i}</p>
+                            </div>
                           </div>
-                       </div>
-                       <div className="flex gap-2">
-                         <button 
-                            onClick={() => {
-                                const next = roleFilter === 'ALL' ? UserRole.BUSINESS : roleFilter === UserRole.BUSINESS ? UserRole.INFLUENCER : 'ALL';
-                                setRoleFilter(next);
-                            }}
-                            className={`text-[10px] font-mono px-3 py-1.5 flex items-center gap-2 border transition-all ${roleFilter !== 'ALL' ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-400' : 'border-white/10 text-white/50 hover:text-white'}`}
-                         >
-                           {roleFilter === UserRole.BUSINESS ? <Briefcase size={12} /> : <Users size={12} />} 
-                           {roleFilter === 'ALL' ? 'FILTER: ROLE' : roleFilter === UserRole.BUSINESS ? 'ROLE: BRAND' : 'ROLE: CREATOR'}
-                         </button>
-                         <button 
-                            onClick={() => {
-                                setShowReportedOnly(!showReportedOnly);
-                                if (!showReportedOnly) {
-                                    setShowUnverifiedOnly(false);
-                                }
-                            }}
-                            className={`text-[10px] font-mono px-3 py-1.5 flex items-center gap-2 border transition-all ${showReportedOnly ? 'bg-red-500/10 border-red-500/50 text-red-400' : 'border-white/10 text-white/50 hover:text-white'}`}
-                         >
-                           <AlertTriangle size={12} /> {showReportedOnly ? 'FILTER: REPORTED' : 'SHOW REPORTED'}
-                         </button>
-                         <button 
-                            onClick={() => {
-                                setShowVerifiedOnly(!showVerifiedOnly);
-                                if (!showVerifiedOnly) setShowUnverifiedOnly(false);
-                            }}
-                            className={`text-[10px] font-mono px-3 py-1.5 flex items-center gap-2 border transition-all ${showVerifiedOnly ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'border-white/10 text-white/50 hover:text-white'}`}
-                         >
-                           <ShieldCheck size={12} /> {showVerifiedOnly ? 'FILTER: VERIFIED' : 'SHOW VERIFIED'}
-                         </button>
-                         <button 
-                            onClick={() => {
-                                setShowUnverifiedOnly(!showUnverifiedOnly);
-                                if (!showUnverifiedOnly) {
-                                    setShowReportedOnly(false);
-                                    setShowVerifiedOnly(false);
-                                }
-                            }}
-                            className={`text-[10px] font-mono px-3 py-1.5 flex items-center gap-2 border transition-all ${showUnverifiedOnly ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'border-white/10 text-white/50 hover:text-white'}`}
-                         >
-                           <Filter size={12} /> {showUnverifiedOnly ? 'FILTER: UNVERIFIED BIZ' : 'FILTER: UNVERIFIED'}
-                         </button>
-                       </div>
+                        ))}
+                      </div>
                     </div>
-                    
+                  </div>
+                </motion.div>
+              )}
+
+              {/* USERS TABLE */}
+              {activeView === 'users' && (
+                <motion.div
+                  key="users"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="h-full flex flex-col"
+                >
+                  <div className="flex-1 overflow-hidden flex flex-col bg-black/40 border border-white/10 rounded-xl">
+                    <div className="p-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+                      <div className="flex items-center gap-4">
+                        <h3 className="font-mono font-bold text-sm tracking-widest text-white">DATABASE_RECORDS</h3>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={12} />
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search user or email..."
+                            className="bg-black/50 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-cyan-500/50 w-56 transition-colors placeholder:text-white/20"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            const next = roleFilter === 'ALL' ? UserRole.BUSINESS : roleFilter === UserRole.BUSINESS ? UserRole.INFLUENCER : 'ALL';
+                            setRoleFilter(next);
+                          }}
+                          className={`text-[10px] font-mono px-3 py-1.5 flex items-center gap-2 border transition-all ${roleFilter !== 'ALL' ? 'bg-indigo-500/10 border-indigo-500/50 text-indigo-400' : 'border-white/10 text-white/50 hover:text-white'}`}
+                        >
+                          {roleFilter === UserRole.BUSINESS ? <Briefcase size={12} /> : <Users size={12} />}
+                          {roleFilter === 'ALL' ? 'FILTER: ROLE' : roleFilter === UserRole.BUSINESS ? 'ROLE: BRAND' : 'ROLE: CREATOR'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowReportedOnly(!showReportedOnly);
+                            if (!showReportedOnly) {
+                              setShowUnverifiedOnly(false);
+                            }
+                          }}
+                          className={`text-[10px] font-mono px-3 py-1.5 flex items-center gap-2 border transition-all ${showReportedOnly ? 'bg-red-500/10 border-red-500/50 text-red-400' : 'border-white/10 text-white/50 hover:text-white'}`}
+                        >
+                          <AlertTriangle size={12} /> {showReportedOnly ? 'FILTER: REPORTED' : 'SHOW REPORTED'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowVerifiedOnly(!showVerifiedOnly);
+                            if (!showVerifiedOnly) setShowUnverifiedOnly(false);
+                          }}
+                          className={`text-[10px] font-mono px-3 py-1.5 flex items-center gap-2 border transition-all ${showVerifiedOnly ? 'bg-cyan-500/10 border-cyan-500/50 text-cyan-400' : 'border-white/10 text-white/50 hover:text-white'}`}
+                        >
+                          <ShieldCheck size={12} /> {showVerifiedOnly ? 'FILTER: VERIFIED' : 'SHOW VERIFIED'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowUnverifiedOnly(!showUnverifiedOnly);
+                            if (!showUnverifiedOnly) {
+                              setShowReportedOnly(false);
+                              setShowVerifiedOnly(false);
+                            }
+                          }}
+                          className={`text-[10px] font-mono px-3 py-1.5 flex items-center gap-2 border transition-all ${showUnverifiedOnly ? 'bg-yellow-500/10 border-yellow-500/50 text-yellow-400' : 'border-white/10 text-white/50 hover:text-white'}`}
+                        >
+                          <Filter size={12} /> {showUnverifiedOnly ? 'FILTER: UNVERIFIED BIZ' : 'FILTER: UNVERIFIED'}
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="flex-1 overflow-auto">
                       <table className="w-full text-left border-collapse">
                         <thead className="bg-black sticky top-0 z-10">
@@ -588,12 +664,12 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                                   </div>
                                   <div>
                                     <div className="font-bold text-white tracking-tight flex items-center gap-2">
-                                        {user.name}
-                                        {user.reportCount > 0 && (
-                                            <div className="bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded text-[9px] font-mono flex items-center gap-1">
-                                                <AlertTriangle size={8} /> {user.reportCount}
-                                            </div>
-                                        )}
+                                      {user.name}
+                                      {user.reportCount > 0 && (
+                                        <div className="bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded text-[9px] font-mono flex items-center gap-1">
+                                          <AlertTriangle size={8} /> {user.reportCount}
+                                        </div>
+                                      )}
                                     </div>
                                     <div className="text-[10px] text-white/30">{user.email}</div>
                                   </div>
@@ -607,10 +683,10 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                               <td className="p-4">
                                 {user.aiMatchScore ? (
                                   <div className="flex items-center gap-2">
-                                     <span className={`font-mono text-xs ${user.aiMatchScore > 80 ? 'text-green-400' : 'text-white/60'}`}>{user.aiMatchScore}%</span>
-                                     <div className="w-12 h-1 bg-white/10 rounded-full overflow-hidden">
-                                        <div className={`h-full ${user.aiMatchScore > 80 ? 'bg-green-500' : 'bg-yellow-500'}`} style={{ width: `${user.aiMatchScore}%` }}></div>
-                                     </div>
+                                    <span className={`font-mono text-xs ${user.aiMatchScore > 80 ? 'text-green-400' : 'text-white/60'}`}>{user.aiMatchScore}%</span>
+                                    <div className="w-12 h-1 bg-white/10 rounded-full overflow-hidden">
+                                      <div className={`h-full ${user.aiMatchScore > 80 ? 'bg-green-500' : 'bg-yellow-500'}`} style={{ width: `${user.aiMatchScore}%` }}></div>
+                                    </div>
                                   </div>
                                 ) : (
                                   <span className="font-mono text-xs text-white/20">N/A</span>
@@ -624,27 +700,27 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                               </td>
                               <td className="p-4 text-right">
                                 <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                   <button 
-                                     onClick={() => setInspectingUser(user)}
-                                     className="p-1.5 hover:bg-cyan-500/20 rounded text-cyan-500/60 hover:text-cyan-400" 
-                                     title="Inspect Messages"
-                                   >
-                                      <MessageSquare size={14} />
-                                   </button>
-                                   <button 
-                                     onClick={() => handleShadowBan(user.id)}
-                                     className={`p-1.5 hover:bg-purple-500/20 rounded transition-colors ${user.status === UserStatus.SHADOW_BANNED ? 'text-purple-400 bg-purple-500/10' : 'text-purple-500/60 hover:text-purple-400'}`}
-                                     title="Shadow Ban"
-                                   >
-                                      <EyeOff size={14} />
-                                   </button>
-                                   <button 
-                                     onClick={() => handleBan(user.id)}
-                                     className="p-1.5 hover:bg-red-500/20 rounded text-red-500/60 hover:text-red-500" 
-                                     title="Ban User"
-                                    >
-                                      <Ban size={14} />
-                                   </button>
+                                  <button
+                                    onClick={() => setInspectingUser(user)}
+                                    className="p-1.5 hover:bg-cyan-500/20 rounded text-cyan-500/60 hover:text-cyan-400"
+                                    title="Inspect Messages"
+                                  >
+                                    <MessageSquare size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleShadowBan(user.id)}
+                                    className={`p-1.5 hover:bg-purple-500/20 rounded transition-colors ${user.status === UserStatus.SHADOW_BANNED ? 'text-purple-400 bg-purple-500/10' : 'text-purple-500/60 hover:text-purple-400'}`}
+                                    title="Shadow Ban"
+                                  >
+                                    <EyeOff size={14} />
+                                  </button>
+                                  <button
+                                    onClick={() => handleBan(user.id)}
+                                    className="p-1.5 hover:bg-red-500/20 rounded text-red-500/60 hover:text-red-500"
+                                    title="Ban User"
+                                  >
+                                    <Ban size={14} />
+                                  </button>
                                 </div>
                               </td>
                             </tr>
@@ -652,11 +728,11 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         </tbody>
                       </table>
                     </div>
-                    
+
                     {/* Action Dock */}
                     <AnimatePresence>
                       {selectedUsers.length > 0 && (
-                        <motion.div 
+                        <motion.div
                           initial={{ y: 100 }} animate={{ y: 0 }} exit={{ y: 100 }}
                           className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#09090b] border border-cyan-500/30 shadow-[0_0_30px_rgba(6,182,212,0.2)] rounded-full px-6 py-3 flex items-center gap-4 z-30"
                         >
@@ -669,115 +745,121 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                 </div>
-              </motion.div>
-            )}
-
-            {/* VERIFICATION QUEUE */}
-            {activeView === 'verifications' && (
-              <motion.div
-                key="verifications"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="grid grid-cols-1 xl:grid-cols-2 gap-6"
-              >
-                {pendingUsers.length === 0 ? (
-                  <div className="col-span-full flex flex-col items-center justify-center py-32 opacity-30">
-                    <CheckCircle size={64} className="text-green-500 mb-6" />
-                    <h2 className="text-2xl font-mono font-bold tracking-widest">QUEUE_EMPTY</h2>
-                    <p className="font-mono text-sm mt-2">ALL TASKS COMPLETED</p>
                   </div>
-                ) : (
-                  pendingUsers.map(user => (
-                    <div key={user.id} className="relative bg-black/40 border border-white/10 rounded-xl overflow-hidden group">
-                       <div className="absolute top-0 left-0 w-1 h-full bg-yellow-500"></div>
-                       <div className="p-6 flex flex-col gap-6">
-                           <div className="flex justify-between items-start">
-                              <div className="flex gap-4">
-                                 <img src={user.avatar} className="w-16 h-16 rounded object-cover border border-white/10" />
-                                 <div>
-                                   <h3 className="font-bold text-white text-lg tracking-tight">{user.name}</h3>
-                                   <p className="text-xs font-mono text-white/50">{user.email}</p>
-                                   <div className="mt-2"><StatusBadge status="PENDING_REVIEW" /></div>
-                                 </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-[10px] font-mono text-white/30">REQ_ID</div>
-                                <div className="font-mono text-white/60">#{user.id.slice(0,6).toUpperCase()}</div>
-                              </div>
-                           </div>
+                </motion.div>
+              )}
 
-                           <div className="bg-[#050505] border border-white/10 rounded p-4">
-                              <div className="flex justify-between items-center mb-3">
-                                 <span className="text-[10px] font-mono font-bold text-white/40 uppercase flex items-center gap-2">
-                                   <FileText size={12} /> Supporting_Doc_01.pdf
-                                 </span>
-                                 <a href="#" className="text-[10px] font-mono text-cyan-400 hover:underline">OPEN_SOURCE</a>
-                              </div>
-                              {user.docUrl ? (
-                                 <div className="relative h-40 group-hover:h-64 transition-all duration-500 overflow-hidden rounded border border-white/5">
-                                    <img src={user.docUrl} className="w-full h-full object-cover opacity-60 hover:opacity-100 transition-opacity" />
-                                 </div>
-                              ) : (
-                                 <div className="h-32 flex items-center justify-center border border-white/5 border-dashed rounded text-white/20 font-mono text-xs">
-                                   NO_PREVIEW_AVAILABLE
-                                 </div>
-                              )}
-                           </div>
-
-                           <div className="grid grid-cols-2 gap-4">
-                              <button 
-                                onClick={() => setRejectingUser(user)}
-                                className="flex items-center justify-center gap-2 py-3 rounded bg-red-500/5 border border-red-500/20 text-red-500 font-mono text-xs font-bold hover:bg-red-500/10 transition-all"
-                              >
-                                 <X size={14} /> REJECT
-                              </button>
-                              <button 
-                                 onClick={() => handleVerify(user.id, true)}
-                                 className="flex items-center justify-center gap-2 py-3 rounded bg-green-500/5 border border-green-500/20 text-green-500 font-mono text-xs font-bold hover:bg-green-500/10 transition-all shadow-[0_0_15px_rgba(34,197,94,0.05)]"
-                              >
-                                 <Check size={14} /> APPROVE
-                              </button>
-                           </div>
-                       </div>
+              {/* VERIFICATION QUEUE */}
+              {activeView === 'verifications' && (
+                <motion.div
+                  key="verifications"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="grid grid-cols-1 xl:grid-cols-2 gap-6"
+                >
+                  {pendingUsers.length === 0 ? (
+                    <div className="col-span-full flex flex-col items-center justify-center py-32 opacity-30">
+                      <CheckCircle size={64} className="text-green-500 mb-6" />
+                      <h2 className="text-2xl font-mono font-bold tracking-widest">QUEUE_EMPTY</h2>
+                      <p className="font-mono text-sm mt-2">ALL TASKS COMPLETED</p>
                     </div>
-                  ))
-                )}
-              </motion.div>
-            )}
+                  ) : (
+                    pendingUsers.map(user => (
+                      <div key={user.id} className="relative bg-black/40 border border-white/10 rounded-xl overflow-hidden group">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-yellow-500"></div>
+                        <div className="p-6 flex flex-col gap-6">
+                          <div className="flex justify-between items-start">
+                            <div className="flex gap-4">
+                              <img src={user.avatar} className="w-16 h-16 rounded object-cover border border-white/10" />
+                              <div>
+                                <h3 className="font-bold text-white text-lg tracking-tight">{user.name}</h3>
+                                <p className="text-xs font-mono text-white/50">{user.email}</p>
+                                <div className="mt-2"><StatusBadge status="PENDING_REVIEW" /></div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-[10px] font-mono text-white/30">REQ_ID</div>
+                              <div className="font-mono text-white/60">#{user.id.slice(0, 6).toUpperCase()}</div>
+                            </div>
+                          </div>
 
-            {/* Reports */}
-            {activeView === 'reports' && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-full text-white/20">
-                 <ShieldAlert size={64} className="mb-4" />
-                 <p className="font-mono text-sm tracking-widest">SYSTEM_SECURE</p>
-                 <p className="font-mono text-xs mt-2">NO CRITICAL ALERTS LOGGED</p>
-              </motion.div>
-            )}
-            
-          </AnimatePresence>
+                          <div className="bg-[#050505] border border-white/10 rounded p-4">
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-[10px] font-mono font-bold text-white/40 uppercase flex items-center gap-2">
+                                <FileText size={12} /> Supporting_Doc_01.pdf
+                              </span>
+                              <a href="#" className="text-[10px] font-mono text-cyan-400 hover:underline">OPEN_SOURCE</a>
+                            </div>
+                            {user.docUrl ? (
+                              <div className="relative h-40 group-hover:h-64 transition-all duration-500 overflow-hidden rounded border border-white/5">
+                                <img src={user.docUrl} className="w-full h-full object-cover opacity-60 hover:opacity-100 transition-opacity" />
+                              </div>
+                            ) : (
+                              <div className="h-32 flex items-center justify-center border border-white/5 border-dashed rounded text-white/20 font-mono text-xs">
+                                NO_PREVIEW_AVAILABLE
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <button
+                              onClick={() => setRejectingUser(user)}
+                              className="flex items-center justify-center gap-2 py-3 rounded bg-red-500/5 border border-red-500/20 text-red-500 font-mono text-xs font-bold hover:bg-red-500/10 transition-all"
+                            >
+                              <X size={14} /> REJECT
+                            </button>
+                            <button
+                              onClick={() => handleVerify(user.id, true)}
+                              className="flex items-center justify-center gap-2 py-3 rounded bg-green-500/5 border border-green-500/20 text-green-500 font-mono text-xs font-bold hover:bg-green-500/10 transition-all shadow-[0_0_15px_rgba(34,197,94,0.05)]"
+                            >
+                              <Check size={14} /> APPROVE
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </motion.div>
+              )}
+
+              {/* Reports */}
+              {activeView === 'reports' && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center h-full text-white/20">
+                  <ShieldAlert size={64} className="mb-4" />
+                  <p className="font-mono text-sm tracking-widest">SYSTEM_SECURE</p>
+                  <p className="font-mono text-xs mt-2">NO CRITICAL ALERTS LOGGED</p>
+                </motion.div>
+              )}
+
+            </AnimatePresence>
           )}
         </div>
-        
+
         {/* Render Modals */}
         <AnimatePresence>
           {inspectingUser && (
-            <MessageInspectorModal 
-              user={inspectingUser} 
-              onClose={() => setInspectingUser(null)} 
+            <MessageInspectorModal
+              user={inspectingUser}
+              onClose={() => setInspectingUser(null)}
               onBan={handleBan}
             />
           )}
           {rejectingUser && (
-            <RejectionModal 
-              user={rejectingUser} 
-              onClose={() => setRejectingUser(null)} 
-              onConfirm={(reason) => handleVerify(rejectingUser.id, false, reason)} 
+            <RejectionModal
+              user={rejectingUser}
+              onClose={() => setRejectingUser(null)}
+              onConfirm={(reason) => handleVerify(rejectingUser.id, false, reason)}
+            />
+          )}
+          {showBroadcastModal && (
+            <BroadcastModal
+              onClose={() => setShowBroadcastModal(false)}
+              onBroadcast={(title, text) => api.adminBroadcastNotification(title, text)}
             />
           )}
         </AnimatePresence>
 
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
