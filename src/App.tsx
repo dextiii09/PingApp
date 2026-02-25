@@ -22,7 +22,10 @@ import { BottomNav } from './components/BottomNav';
 import { APP_LOGO, PLACEHOLDER_AVATAR } from './constants';
 import { Check, Mail, Lock, ArrowRight, Sparkles, Briefcase, Camera, Globe, TrendingUp, CheckCircle, ChevronLeft, AlertCircle, Zap, Search, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { App as CapApp } from '@capacitor/app';// Toast Component
+import { App as CapApp } from '@capacitor/app';
+import { PushNotifications } from '@capacitor/push-notifications';
+
+// Toast Component
 const Toast = ({ message, onClose }: { message: string, onClose: () => void }) => {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -139,9 +142,51 @@ const App = () => {
     }
   }, [isDarkMode]);
 
+  // Native Push Notification Registration
+  useEffect(() => {
+    if (user && user.id && view === 'app') {
+      const registerPush = async () => {
+        try {
+          // Request permissions from the OS
+          let permStatus = await PushNotifications.checkPermissions();
+          if (permStatus.receive === 'prompt') {
+            permStatus = await PushNotifications.requestPermissions();
+          }
 
+          if (permStatus.receive === 'granted') {
+            // Register with Apple/Google to receive token
+            await PushNotifications.register();
 
-  // Real-time Matches Subscription
+            PushNotifications.addListener('registration', (token) => {
+              console.log('Push registration success, token: ' + token.value);
+              api.saveFcmToken(user.id, token.value);
+            });
+
+            PushNotifications.addListener('registrationError', (error: any) => {
+              console.error('Push registration error: ', JSON.stringify(error));
+            });
+
+            PushNotifications.addListener('pushNotificationReceived', (notification) => {
+              // Shown when app is open
+              setToastMessage(notification.title || "New Notification");
+            });
+
+            PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+              // Action when user taps on it from background
+              setShowNotifications(true);
+            });
+          }
+        } catch (e) {
+          console.log("Push notifications not supported in this environment.", e);
+        }
+      };
+      registerPush();
+
+      return () => {
+        PushNotifications.removeAllListeners();
+      };
+    }
+  }, [user?.id, view]);  // Real-time Matches Subscription
   useEffect(() => {
     if (user && user.id && view === 'app') {
       const unsubscribe = api.subscribeToMatches(user.id, (updatedMatches) => {
@@ -262,6 +307,12 @@ const App = () => {
   const handleOpenOverlay = (setter: React.Dispatch<React.SetStateAction<boolean>>) => {
     pushHistoryState('overlay');
     setter(true);
+    // Automatically mark notifications as read when opening the panel
+    if (setter === setShowNotifications) {
+      api.markNotificationsAsRead().then(() => {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      }).catch(console.error);
+    }
   };
 
   const handleOpenMatch = (match: Match) => {

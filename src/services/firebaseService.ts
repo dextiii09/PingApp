@@ -1,7 +1,7 @@
 
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc,
-  query, where, addDoc, onSnapshot, orderBy, limit, writeBatch
+  query, where, addDoc, onSnapshot, orderBy, limit, writeBatch, arrayUnion
 } from "firebase/firestore";
 import {
   signInWithEmailAndPassword,
@@ -724,6 +724,18 @@ class FirebaseService {
     this.checkConfig();
     await updateDoc(doc(db, "users", this.currentUser.id), { isPremium: true });
     this.currentUser.isPremium = true;
+  }
+
+  async saveFcmToken(userId: string, token: string): Promise<void> {
+    this.checkConfig();
+    try {
+      const userRef = doc(db, "users", userId);
+      await updateDoc(userRef, {
+        fcmTokens: arrayUnion(token)
+      });
+    } catch (e) {
+      console.warn("Could not save FCM token:", e);
+    }
   }
 
   async adminBroadcastNotification(title: string, text: string): Promise<void> {
