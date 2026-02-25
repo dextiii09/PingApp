@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, UserRole, Match, Notification } from '../types';
 import { GlassCard } from './GlassCard';
-import { Heart, Search, Zap, TrendingUp, LayoutGrid, Crown, ShieldCheck, ChevronRight, Briefcase } from 'lucide-react';
+import { Heart, Search, Zap, TrendingUp, LayoutGrid, Crown, ShieldCheck, ChevronRight, Briefcase, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 
@@ -9,6 +9,7 @@ interface DashboardProps {
    user: User;
    onNavigate: (view: string) => void;
    onUpgrade: () => void;
+   onSettingsClick: () => void;
    newLikesCount: number;
    onUpdateUser: (data: Partial<User>) => Promise<void>;
 }
@@ -17,6 +18,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
    user,
    onNavigate,
    onUpgrade,
+   onSettingsClick,
    newLikesCount,
    onUpdateUser
 }) => {
@@ -33,19 +35,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </h1>
                   <p className="text-gray-500 dark:text-white/40 text-sm font-medium">Ready for your next collaboration?</p>
                </div>
-               <div className="relative group">
-                  <div className="absolute -inset-1 bg-gradient-to-tr from-pink-500 to-orange-400 rounded-full blur opacity-40 group-hover:opacity-100 transition duration-500"></div>
-                  <img
-                     src={user.avatar}
-                     alt="Profile"
-                     className="relative w-14 h-14 rounded-full border-2 border-white dark:border-black object-cover"
-                     onClick={() => onNavigate('profile')}
-                  />
-                  {user.verified && (
-                     <div className="absolute -bottom-1 -right-1 bg-blue-500 border-2 border-white dark:border-black rounded-full p-1 shadow-lg">
-                        <ShieldCheck size={12} className="text-white" />
-                     </div>
-                  )}
+               <div className="flex items-center gap-3">
+                  <button
+                     onClick={onSettingsClick}
+                     className="p-2.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                  >
+                     <Settings size={20} />
+                  </button>
+                  <div className="relative group cursor-pointer" onClick={() => onNavigate('profile')}>
+                     <div className="absolute -inset-1 bg-gradient-to-tr from-pink-500 to-orange-400 rounded-full blur opacity-40 group-hover:opacity-100 transition duration-500"></div>
+                     <img
+                        src={user.avatar}
+                        alt="Profile"
+                        className="relative w-14 h-14 rounded-full border-2 border-white dark:border-black object-cover"
+                     />
+                     {user.verified && (
+                        <div className="absolute -bottom-1 -right-1 bg-blue-500 border-2 border-white dark:border-black rounded-full p-1 shadow-lg">
+                           <ShieldCheck size={12} className="text-white" />
+                        </div>
+                     )}
+                  </div>
                </div>
             </div>
 
