@@ -512,6 +512,14 @@ class FirebaseService {
         timestamp: Date.now(),
         read: false
       });
+
+      // Ping Vercel Native Push API hook
+      fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds: [userId], title, body: text, data: { type } })
+      }).catch(e => console.warn("Vercel Push API failed:", e));
+
     } catch (e) { console.error("Notification creation failed", e); }
   }
 
@@ -741,6 +749,13 @@ class FirebaseService {
   async adminBroadcastNotification(title: string, text: string): Promise<void> {
     this.checkConfig();
     try {
+      // Fire Native Push Hook
+      fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isBroadcast: true, title, body: text, data: { type: 'system' } })
+      }).catch(e => console.warn("Vercel Push API failed:", e));
+
       const usersSnap = await getDocs(collection(db, "users"));
       // Firestore batches have a 500 operation limit. We chunk them if needed.
       const chunks = [];
