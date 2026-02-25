@@ -298,12 +298,11 @@ class FirebaseService {
   // --- DISCOVERY ---
 
   async getCandidates(userRole: UserRole): Promise<User[]> {
-    const fallback = userRole === UserRole.BUSINESS ? MOCK_INFLUENCER_USERS : MOCK_BUSINESS_USERS;
-    if (!this.currentUser) return fallback;
+    if (!this.currentUser) return [];
 
     if (this.currentUser.id && this.currentUser.id.startsWith('test-')) {
       try {
-        if (!isConfigured || !db) return fallback;
+        if (!isConfigured || !db) return [];
         const targetRole = userRole === UserRole.BUSINESS ? UserRole.INFLUENCER : UserRole.BUSINESS;
         const q = query(
           collection(db, "users"),
@@ -311,14 +310,13 @@ class FirebaseService {
           where("status", "==", UserStatus.ACTIVE)
         );
         const dbUsers = (await getDocs(q)).docs.map(d => d.data() as User);
-        if (dbUsers.length < 3) return fallback;
         return dbUsers;
       } catch (e) {
-        return fallback;
+        return [];
       }
     }
 
-    if (!isConfigured || !db) return fallback;
+    if (!isConfigured || !db) return [];
     const targetRole = userRole === UserRole.BUSINESS ? UserRole.INFLUENCER : UserRole.BUSINESS;
 
     try {
@@ -342,10 +340,9 @@ class FirebaseService {
         }
       });
 
-      const results = [...priorityCandidates, ...candidates];
-      return results.length > 0 ? results : fallback;
+      return [...priorityCandidates, ...candidates];
     } catch (error) {
-      return fallback;
+      return [];
     }
   }
 
