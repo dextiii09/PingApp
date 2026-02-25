@@ -33,6 +33,30 @@ service cloud.firestore {
       
       // Nobody should be hard-deleting users from the client, except admins or backend cloud functions
       allow delete: if isAdmin();
+
+      // --- SUBCOLLECTIONS ---
+      
+      match /swipes/{swipeId} {
+        // Users can read/write their own outgoing swipes
+        allow read, create: if isOwner(userId);
+        allow update, delete: if isAdmin();
+      }
+      
+      match /received_swipes/{swipeId} {
+        // Users can see who liked them, and update the seen status
+        allow read, update: if isOwner(userId);
+        // Anyone authenticated can swipe ON them (create a received_swipe)
+        allow create: if isAuthenticated();
+        allow delete: if isAdmin();
+      }
+
+      match /notifications/{notificationId} {
+        // Users can read and update (mark as read) their own notifications
+        allow read, update: if isOwner(userId);
+        // Anyone can trigger a notification (e.g. from a match or message)
+        allow create: if isAuthenticated();
+        allow delete: if isOwner(userId) || isAdmin();
+      }
     }
 
     // ------------------------------------------------------------------------

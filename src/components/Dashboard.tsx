@@ -10,6 +10,8 @@ interface DashboardProps {
    onNavigate: (view: string) => void;
    onUpgrade: () => void;
    onSettingsClick: () => void;
+   onNotificationsClick: () => void;
+   notificationCount: number;
    newLikesCount: number;
    onUpdateUser: (data: Partial<User>) => Promise<void>;
 }
@@ -19,6 +21,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
    onNavigate,
    onUpgrade,
    onSettingsClick,
+   onNotificationsClick,
+   notificationCount,
    newLikesCount,
    onUpdateUser
 }) => {
@@ -36,6 +40,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <p className="text-gray-500 dark:text-white/40 text-sm font-medium">Ready for your next collaboration?</p>
                </div>
                <div className="flex items-center gap-3">
+                  <button
+                     onClick={onNotificationsClick}
+                     className="relative p-2.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                  >
+                     <Zap size={20} />
+                     {notificationCount > 0 && (
+                        <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-black"></span>
+                     )}
+                  </button>
                   <button
                      onClick={onSettingsClick}
                      className="p-2.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
