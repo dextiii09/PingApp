@@ -513,6 +513,48 @@ class FirebaseService {
     }
   }
 
+  async getPendingLikes(): Promise<{ profile: User, timestamp: number }[]> {
+    if (!this.currentUser || !isConfigured || !db) return [];
+    try {
+      // In a real app, you might want to show BOTH seen and unseen likes in the view, 
+      // but only ping the counter for unseen. Since this is an MVP, let's just fetch all the likes they got.
+      const q = query(collection(db, "users", this.currentUser.id, "received_swipes"));
+      const snap = await getDocs(q);
+
+      const likes: { profile: User, timestamp: number }[] = [];
+      for (const docSnap of snap.docs) {
+        const data = docSnap.data();
+        if (data.matched) continue; // Don't show already matched people here
+
+        const profileSnap = await getDoc(doc(db, "users", docSnap.id));
+        if (profileSnap.exists()) {
+          likes.push({ profile: profileSnap.data() as User, timestamp: data.timestamp || 0 });
+        }
+      }
+      return likes.sort((a, b) => b.timestamp - a.timestamp);
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
+  async markLikesAsSeen(): Promise<void> {
+    if (!this.currentUser || !isConfigured || !db) return;
+    try {
+      const q = query(collection(db, "users", this.currentUser.id, "received_swipes"), where("seen", "==", false));
+      const snap = await getDocs(q);
+      if (snap.empty) return;
+
+      const batch = writeBatch(db);
+      snap.forEach(docSnap => {
+        batch.update(docSnap.ref, { seen: true });
+      });
+      await batch.commit();
+    } catch (e) {
+      console.error("Error marking likes as seen:", e);
+    }
+  }
+
   async getAnalyticsStats(userId: string): Promise<{ profileViews: number; matchRate: number; chartData: { day: string, value: number }[]; recentActivity: any[] }> {
     const fallback = { profileViews: 0, matchRate: 0, chartData: [], recentActivity: [] };
     if (!isConfigured || !db || userId.startsWith('test-')) return fallback;

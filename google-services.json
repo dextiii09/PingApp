@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "450129567945",
+    "project_id": "pingapp-ca5fb",
+    "storage_bucket": "pingapp-ca5fb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:450129567945:android:d3274a2e66ab2b1ab5ed18",
+        "android_client_info": {
+          "package_name": "com.ping.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADiOhX6ipvmEgy7JDt0u-9kuSJifb6CoY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

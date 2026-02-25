@@ -1,5 +1,13 @@
 {
 	"appId": "co.pixelarcade.pingapp",
 	"appName": "pingapp",
-	"webDir": "dist"
+	"webDir": "dist",
+	"server": {
+		"allowNavigation": [
+			"*.firebaseapp.com",
+			"*.firebaseio.com",
+			"*.googleapis.com",
+			"*.google.com"
+		]
+	}
 }

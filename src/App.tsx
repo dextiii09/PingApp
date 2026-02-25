@@ -13,6 +13,7 @@ import { EditProfile } from './components/EditProfile';
 import { SettingsView } from './components/SettingsView';
 import { Dashboard } from './components/Dashboard';
 import { AnalyticsView } from './components/AnalyticsView';
+import { LikesView } from './components/LikesView';
 import { Onboarding } from './components/Onboarding';
 import { PremiumPage } from './components/PremiumPage';
 import { NotificationsView } from './components/NotificationsView';
@@ -247,7 +248,7 @@ const App = () => {
     pushHistoryState(v);
     if (v === 'deck') setHomeView('deck');
     if (v === 'analytics') setHomeView('analytics');
-    if (v === 'likes') showToast("Feature coming soon!");
+    if (v === 'likes') setHomeView('likes');
     if (v === 'matches') setActiveTab('matches');
     if (v === 'profile') setActiveTab('profile');
   };
@@ -545,6 +546,14 @@ const App = () => {
               <Dashboard key="dashboard" user={user} notificationCount={notifications.filter(n => !n.read).length} newLikesCount={likeCount} onNavigate={handleNavigate} onSettingsClick={() => handleOpenOverlay(setIsSettingsOpen)} onNotificationsClick={() => handleOpenOverlay(setShowNotifications)} onUpgrade={() => handleOpenOverlay(setShowPremium)} onUpdateUser={handleUpdateUser} />
             ) : homeView === 'analytics' ? (
               <AnalyticsView key="analytics" user={user} onBack={() => setHomeView('dashboard')} onUpgrade={() => handleOpenOverlay(setShowPremium)} />
+            ) : homeView === 'likes' ? (
+              <LikesView
+                key="likes"
+                user={user}
+                onBack={() => { setHomeView('dashboard'); refreshData(); }}
+                onUpgrade={() => handleOpenOverlay(setShowPremium)}
+                isDarkMode={isDarkMode}
+              />
             ) : (
               <div key="deck" className="h-full w-full relative">
                 <SwipeDeck
@@ -563,7 +572,6 @@ const App = () => {
                       if (result.isMatch) await refreshData();
                       return result;
                     } catch (err: any) {
-                      // Log but don't block the UI if it's just a missing index
                       console.error("Swipe operation failed:", err);
                       return { isMatch: false };
                     }
@@ -583,9 +591,9 @@ const App = () => {
               <h2 className={`text-3xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Messages</h2>
               <div className={`mt-6 flex items-center px-4 py-3.5 rounded-2xl ${isDarkMode ? 'bg-white/5 border border-white/10 text-white' : 'bg-white border border-gray-200 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-gray-900'} transition-all`}>
                 <Search size={20} className={isDarkMode ? 'text-white/40' : 'text-gray-400'} />
-                <input 
-                  type="text" 
-                  placeholder="Search matches..." 
+                <input
+                  type="text"
+                  placeholder="Search matches..."
                   className={`bg-transparent border-none outline-none w-full ml-3 text-sm font-semibold placeholder:text-gray-400 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}
                 />
               </div>
@@ -612,7 +620,7 @@ const App = () => {
                     {matches.length} Matches
                   </span>
                 </div>
-                
+
                 <div className="space-y-4">
                   {matches.map(match => (
                     <div key={match.id} onClick={() => handleOpenMatch(match)} className={`flex items-center gap-4 p-4 cursor-pointer rounded-3xl transition-all duration-300 group ${isDarkMode ? 'bg-white/5 hover:bg-white/10 border border-white/5' : 'bg-white border border-gray-100 shadow-[0_8px_30px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_12px_40px_-4px_rgba(236,72,153,0.15)] hover:border-pink-200'} relative overflow-hidden`}>
