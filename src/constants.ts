@@ -52,7 +52,10 @@ export const MOCK_BUSINESS_USERS: User[] = [
     stats: { budget: '₹5,000 - ₹15,000' },
     aiMatchScore: 98,
     aiMatchReason: 'Your high engagement in the fitness niche perfectly aligns with their new seasonal collection launch.',
-    portfolio: []
+    portfolio: [],
+    pingScore: 95,
+    completionRate: 100,
+    responseTime: 'Under 1h'
   },
   {
     ...COMMON_ADMIN_FIELDS,
@@ -108,7 +111,10 @@ export const MOCK_INFLUENCER_USERS: User[] = [
     socials: { instagram: '@jamietravels', youtube: 'youtube.com/jamierivera' },
     aiMatchScore: 92,
     aiMatchReason: 'High engagement in the travel sector makes Jamie perfect for location-based campaigns.',
-    portfolio: []
+    portfolio: [],
+    pingScore: 90,
+    completionRate: 95,
+    responseTime: 'Under 2h'
   },
   {
     ...COMMON_ADMIN_FIELDS,
@@ -149,6 +155,7 @@ export const MOCK_INFLUENCER_USERS: User[] = [
     id: 'inf-3',
     name: 'Alex Rivera',
     email: 'alex@fitness.fit',
+    isPremium: false, // Non-premium for verification
     role: UserRole.INFLUENCER,
     avatar: PLACEHOLDER_AVATAR,
     bio: 'Certified personal trainer and hybrid athlete. Helping you build a body that looks good and performs better. No shortcuts, just hard work.',

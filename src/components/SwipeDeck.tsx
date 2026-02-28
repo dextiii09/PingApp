@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useMemo } from 'react';
 import { User, UserRole } from '../types';
-import { X, Heart, Star, MapPin, SlidersHorizontal, Search, Zap, RotateCcw, PlayCircle, ChevronDown } from 'lucide-react';
+import { X, Heart, Star, MapPin, SlidersHorizontal, Search, Zap, RotateCcw, PlayCircle, ChevronDown, Sparkles } from 'lucide-react';
 import { motion, useMotionValue, useTransform, AnimatePresence, animate as animateValue } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { Button } from './Button';
@@ -182,54 +182,80 @@ const FilterModal: React.FC<{
   );
 };
 
-const MatchOverlay: React.FC<{ candidate: User; onClose: () => void; onChat: () => void }> = ({ candidate, onClose, onChat }) => (
+const MatchOverlay: React.FC<{ candidate: User; isPremium?: boolean; onUpgrade?: () => void; onClose: () => void; onChat: () => void }> = ({ candidate, isPremium, onUpgrade, onClose, onChat }) => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl p-6"
+    className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/95 backdrop-blur-3xl p-6"
   >
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    {/* Cinematic Background Glow */}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center">
+      <div className="absolute w-[80vw] h-[80vw] max-w-[600px] max-h-[600px] bg-pink-500/20 rounded-full blur-[120px] mix-blend-screen animate-pulse"></div>
+      <div className="absolute w-[60vw] h-[60vw] max-w-[400px] max-h-[400px] bg-orange-400/20 rounded-full blur-[100px] mix-blend-screen animate-pulse" style={{ animationDelay: '1s' }}></div>
       {[...Array(20)].map((_, i) => (
         <motion.div
           key={i}
           initial={{ y: -10, x: Math.random() * window.innerWidth, opacity: 1 }}
           animate={{ y: window.innerHeight + 10, rotate: 360 }}
           transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, ease: "linear" }}
-          className="absolute w-2 h-2 bg-gradient-to-tr from-pink-500 to-yellow-500 rounded-full"
+          className="absolute w-1.5 h-1.5 bg-gradient-to-tr from-pink-500 to-yellow-500 rounded-full shadow-[0_0_10px_rgba(236,72,153,0.8)]"
         />
       ))}
     </div>
 
     <motion.div
-      initial={{ scale: 0.5, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ type: "spring", bounce: 0.5 }}
-      className="text-center space-y-8 relative z-10"
+      initial={{ scale: 0.8, opacity: 0, y: 20 }}
+      animate={{ scale: 1, opacity: 1, y: 0 }}
+      transition={{ type: "spring", damping: 20, stiffness: 100 }}
+      className="text-center space-y-8 relative z-10 w-full max-w-sm"
     >
-      <div className="font-mono text-pink-500 font-bold tracking-widest text-xl animate-pulse">IT'S A MATCH!</div>
+      <div className="font-mono text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-400 font-black tracking-[0.3em] text-2xl animate-pulse drop-shadow-[0_0_15px_rgba(236,72,153,0.5)]">IT'S A MATCH!</div>
 
-      <div className="flex items-center justify-center gap-4">
-        <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden shadow-[0_0_30px_rgba(255,255,255,0.3)]">
-          <img src="https://picsum.photos/200/200" className="w-full h-full object-cover" alt="user" />
+      <div className="flex items-center justify-center gap-0">
+        <div className="w-28 h-28 rounded-full border-4 border-black relative overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.2)] pointer-events-none z-10 translate-x-4">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop" className="w-full h-full object-cover" alt="user" />
+          <div className="absolute inset-0 ring-inset ring-2 ring-white/20 rounded-full"></div>
         </div>
-        <div className="w-24 h-24 rounded-full border-4 border-pink-500 overflow-hidden shadow-[0_0_30px_rgba(236,72,153,0.5)]">
+        <div className="w-32 h-32 rounded-full border-4 border-pink-500 relative overflow-hidden shadow-[0_0_50px_rgba(236,72,153,0.6)] pointer-events-none z-20">
           <img src={candidate.avatar} className="w-full h-full object-cover" alt="match" />
+          <div className="absolute inset-0 ring-inset ring-2 ring-white/20 rounded-full"></div>
         </div>
       </div>
 
       <div>
-        <h2 className="text-3xl font-bold text-white mb-2">You & {candidate.name}</h2>
-        <p className="text-white/60">vibe with each other.</p>
+        <h2 className="text-4xl font-extrabold text-white mb-3 drop-shadow-lg tracking-tight">You & {candidate.name}</h2>
+        {candidate.aiMatchReason ? (
+          <div className="bg-white/10 border border-white/20 rounded-2xl p-5 mt-6 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+            <p className="text-[11px] text-pink-400 font-bold uppercase tracking-[0.2em] mb-3 flex items-center justify-center gap-1.5 drop-shadow-sm"><Sparkles size={14} className="animate-pulse" /> AI Match Insight</p>
+            {isPremium ? (
+              <p className="text-white/95 text-sm font-medium leading-relaxed">{candidate.aiMatchReason}</p>
+            ) : (
+              <div className="flex flex-col items-center gap-3 mt-2">
+                <p className="text-white/80 text-sm font-medium leading-relaxed blur-[6px] select-none pointer-events-none opacity-60">
+                  This is a highly personalized reason explaining why you two are a perfect match based on deep data analysis from Ping AI.
+                </p>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                  <button onClick={onUpgrade} className="bg-gradient-to-r from-pink-500 to-orange-400 hover:from-pink-600 hover:to-orange-500 text-white text-xs font-bold px-6 py-3 rounded-full flex items-center gap-2 shadow-[0_0_20px_rgba(236,72,153,0.4)] transition-all hover:scale-105">
+                    <Lock size={14} /> Unlock Insight
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-white/60 text-lg font-medium">vibe with each other.</p>
+        )}
       </div>
 
-      <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
-        <Button fullWidth onClick={onChat} className="flex items-center gap-2 justify-center">
-          Message
+      <div className="flex flex-col gap-4 w-full max-w-[280px] mx-auto pt-4">
+        <Button fullWidth onClick={onChat} className="flex items-center gap-2 justify-center py-4 text-[15px] shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+          Send Message
         </Button>
-        <Button fullWidth variant="secondary" onClick={onClose}>
+        <button onClick={onClose} className="w-full py-4 text-white/50 font-bold text-sm tracking-wider uppercase hover:text-white transition-colors">
           Keep Swiping
-        </Button>
+        </button>
       </div>
     </motion.div>
   </motion.div>
@@ -459,7 +485,9 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({
 
       // 4. Check for match
       if (result && result.isMatch) {
-        setMatchData(user);
+        // If there is an AI Match Reason generated, merge it into the temporary user object to display in the modal
+        const reason = result.match?.aiMatchReason || user.aiMatchReason;
+        setMatchData({ ...user, aiMatchReason: reason });
       }
     } catch (e) {
       console.error("Swipe API error:", e);
@@ -615,11 +643,17 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({
               ) : (
                 <div className="relative w-full h-[75vh] sm:h-[80vh]">
                   {nextCard && (
-                    <div key={`next-preview-${nextCard.id}`} className="absolute inset-0 scale-95 opacity-60 pointer-events-none z-0 transition-transform duration-300">
+                    <motion.div
+                      key={`next-preview-${nextCard.id}`}
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 0.95, opacity: 0.6 }}
+                      className="absolute inset-0 pointer-events-none z-0 transition-all duration-500"
+                      style={{ willChange: 'transform, opacity' }}
+                    >
                       <div className="w-full h-full overflow-hidden relative bg-[#1a1a1a] border border-white/20 rounded-3xl !p-0 shadow-2xl">
                         <ProfileCard user={nextCard} role={currentUserRole} isPremium={isPremium} />
                       </div>
-                    </div>
+                    </motion.div>
                   )}
                   <AnimatePresence mode="popLayout" custom={lastSwipeDir}>
                     {activeCard && (
@@ -665,22 +699,23 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({
           )}
         </div>
 
-        {/* Action Dock - Glassmorphic Pill */}
+        {/* Action Dock - Premium Glassmorphic Pill */}
         {viewMode === 'stack' && !isLoading && (
-          <div className="absolute bottom-6 left-0 w-full z-[50] flex justify-center pointer-events-none px-4 shrink-0" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-            <div className="flex items-center gap-4 sm:gap-6 px-4 py-3 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+          <div className="absolute bottom-8 left-0 w-full z-[80] flex justify-center pointer-events-none px-4 shrink-0 transition-all duration-300" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+            <div className="flex items-center gap-3 sm:gap-5 px-5 py-3.5 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-full shadow-[0_20px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1)] relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none"></div>
               <ActionButton
-                icon={<RotateCcw size={20} />}
-                color={swipeHistory.length > 0 ? "text-yellow-400" : "text-white/30"}
-                bg="bg-transparent"
+                icon={<RotateCcw size={20} strokeWidth={2.5} />}
+                color={swipeHistory.length > 0 ? "text-yellow-400" : "text-white/20"}
+                bg="bg-black/40"
                 onClick={handleRewind}
                 disabled={swipeHistory.length === 0}
-                className="pointer-events-auto border-transparent shadow-none"
+                className="pointer-events-auto border-white/5 hover:bg-white/10"
               />
               <ActionButton
-                icon={<X size={32} />}
-                color="text-red-500"
-                bg="bg-black/60 border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.15)] hover:shadow-[0_0_30px_rgba(239,68,68,0.3)]"
+                icon={<X size={32} strokeWidth={3} />}
+                color="text-[#ff4b4b]"
+                bg="bg-black/60 border-[#ff4b4b]/20 shadow-[0_0_20px_rgba(255,75,75,0.15)] hover:shadow-[0_0_30px_rgba(255,75,75,0.3)] hover:bg-[#ff4b4b]/10 hover:border-[#ff4b4b]/50"
                 size="large"
                 onClick={() => {
                   if (activeCard) {
@@ -692,20 +727,20 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({
               />
               <ActionButton
                 icon={<Star size={24} fill="currentColor" />}
-                color={isPremium ? "text-blue-400" : "text-white/50"}
-                bg="bg-blue-500/10 border-blue-400/50 shadow-[0_0_20px_rgba(96,165,250,0.3)] hover:shadow-[0_0_40px_rgba(96,165,250,0.5)]"
+                color={isPremium ? "text-[#00e5ff]" : "text-white/40"}
+                bg="bg-black/60 border-[#00e5ff]/30 shadow-[0_0_20px_rgba(0,229,255,0.2)] hover:shadow-[0_0_40px_rgba(0,229,255,0.4)] hover:bg-[#00e5ff]/10 hover:border-[#00e5ff]/60"
                 onClick={() => {
                   if (activeCard) {
                     handleSuperLikeAction();
                   }
                 }}
                 disabled={stack.length === 0}
-                className="scale-110 hover:scale-125 transition-all duration-300 ring-4 ring-black/50 pointer-events-auto"
+                className="scale-[1.15] hover:scale-[1.3] transition-all duration-300 pointer-events-auto mx-2"
               />
               <ActionButton
                 icon={<Heart size={32} fill="currentColor" />}
-                color="text-green-500"
-                bg="bg-black/60 border-green-500/20 shadow-[0_0_20px_rgba(34,197,94,0.15)] hover:shadow-[0_0_30px_rgba(34,197,94,0.3)]"
+                color="text-[#00ff87]"
+                bg="bg-black/60 border-[#00ff87]/20 shadow-[0_0_20px_rgba(0,255,135,0.15)] hover:shadow-[0_0_30px_rgba(0,255,135,0.3)] hover:bg-[#00ff87]/10 hover:border-[#00ff87]/50"
                 size="large"
                 onClick={() => {
                   if (activeCard) {
@@ -717,10 +752,10 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({
               />
               <ActionButton
                 icon={<Zap size={20} fill="currentColor" />}
-                color={isBoostActive ? "text-white" : "text-purple-500"}
-                bg={isBoostActive ? "bg-purple-500 border-purple-400" : "bg-transparent"}
+                color={isBoostActive ? "text-white" : "text-[#b026ff]"}
+                bg={isBoostActive ? "bg-gradient-to-br from-[#b026ff] to-[#ff00cc] border-transparent shadow-[0_0_20px_rgba(176,38,255,0.5)]" : "bg-black/40 border-white/5 hover:bg-white/10"}
                 onClick={handleBoost}
-                className={`pointer-events-auto ${!isBoostActive && 'border-transparent shadow-none'}`}
+                className="pointer-events-auto"
               />
             </div>
           </div>
@@ -732,6 +767,8 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({
         {matchData && (
           <MatchOverlay
             candidate={matchData}
+            isPremium={isPremium}
+            onUpgrade={onUpgrade}
             onClose={() => setMatchData(null)}
             onChat={() => {
               if (onMatchChat) onMatchChat(matchData);
@@ -777,16 +814,31 @@ interface DraggableCardProps {
 }
 
 const DraggableCard = forwardRef<SwipeCardHandle, DraggableCardProps>(({ user, role, isPremium, dailySwipeCount = 0, onSwipeCountChange, onUpgrade, onSwipe, onClick, customSwipeDir = 'left' }, ref) => {
+  const [isSwiping, setIsSwiping] = useState(false);
+  const isDraggingRef = useRef(false);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
 
+  const flyOut = useCallback((dir: 'left' | 'right' | 'up') => {
+    setIsSwiping(true);
+    const flyX = dir === 'left' ? -1000 : dir === 'right' ? 1000 : 0;
+    const flyY = dir === 'up' ? -1200 : 0;
+
+    animateValue(x, flyX, { duration: 0.3, ease: 'easeOut' });
+    animateValue(y, flyY, { duration: 0.3, ease: 'easeOut' });
+
+    // Delay parent state update until animation finishes back in the parent
+    setTimeout(() => {
+      onSwipe(dir);
+    }, 300);
+  }, [x, y, onSwipe]);
+
   useImperativeHandle(ref, () => ({
     triggerSwipe: async (direction) => {
-      // Just fire the swipe event; the exit animation will handle the visual part
-      onSwipe(direction);
+      flyOut(direction);
     }
-  }), [onSwipe]);
+  }), [flyOut]);
 
   const opacityLike = useTransform(x, [20, 150], [0, 1]);
   const opacityNope = useTransform(x, [-20, -150], [0, 1]);
@@ -801,10 +853,14 @@ const DraggableCard = forwardRef<SwipeCardHandle, DraggableCardProps>(({ user, r
   // Using a ref to track the last down position to explicitly cancel taps that are actually drags
 
   const handleDragEnd = async (_: any, info: any) => {
+    // Reset drag flag slightly after drag ends so onTap doesn't catch it
+    setTimeout(() => { isDraggingRef.current = false; }, 100);
+
     const threshold = 100;
     const { x: xOff, y: yOff } = info.offset;
     const { x: vX, y: vY } = info.velocity;
-    console.log(`onDragEnd: offset=[${Math.round(xOff)}, ${Math.round(yOff)}], velocity=[${Math.round(vX)}, ${Math.round(vY)}]`);
+
+    if (isSwiping) return;
 
     if (xOff > threshold || vX > 500) {
       if (!isPremium && dailySwipeCount >= 5) {
@@ -815,10 +871,10 @@ const DraggableCard = forwardRef<SwipeCardHandle, DraggableCardProps>(({ user, r
         return;
       }
       triggerHaptic(20);
-      onSwipe('right');
+      flyOut('right');
     } else if (xOff < -threshold || vX < -500) {
       triggerHaptic(20);
-      onSwipe('left');
+      flyOut('left');
     } else if (yOff < -threshold || vY < -500) {
       if (!isPremium) {
         triggerHaptic([50, 50]);
@@ -828,7 +884,7 @@ const DraggableCard = forwardRef<SwipeCardHandle, DraggableCardProps>(({ user, r
         return;
       }
       triggerHaptic([15, 30, 15]);
-      onSwipe('up');
+      flyOut('up');
     } else {
       animateValue(x, 0, { type: 'spring', stiffness: 300, damping: 20 });
       animateValue(y, 0, { type: 'spring', stiffness: 300, damping: 20 });
@@ -837,16 +893,15 @@ const DraggableCard = forwardRef<SwipeCardHandle, DraggableCardProps>(({ user, r
 
   return (
     <motion.div
-      drag
+      drag={!isSwiping}
       dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
       dragElastic={0.8}
       dragSnapToOrigin={true}
+      onDragStart={() => { isDraggingRef.current = true; }}
       onDragEnd={handleDragEnd}
-      onTap={(e, info) => {
-        // Prevent tap if it was actually a drag
-        if (Math.abs(info.offset.x) < 5 && Math.abs(info.offset.y) < 5) {
-          if (onClick) onClick();
-        }
+      onTap={() => {
+        // Only fire tap if we haven't been dragging
+        if (!isDraggingRef.current && onClick) onClick();
       }}
       whileTap={{ scale: 0.98 }}
       whileDrag={{ scale: 1.02, cursor: 'grabbing' }}
@@ -858,8 +913,15 @@ const DraggableCard = forwardRef<SwipeCardHandle, DraggableCardProps>(({ user, r
         rotate: custom === 'left' ? -30 : custom === 'right' ? 30 : 0,
         transition: { duration: 0.3 }
       })}
-      style={{ x, y, rotate, boxShadow: glow, touchAction: 'none' }}
-      className="absolute inset-0 z-[100] cursor-grab active:cursor-grabbing rounded-3xl"
+      style={{
+        x, y, rotate,
+        boxShadow: glow,
+        touchAction: 'none',
+        willChange: 'transform',
+        pointerEvents: isSwiping ? 'none' : 'auto',
+        zIndex: isSwiping ? 50 : 100
+      }}
+      className="absolute inset-0 cursor-grab active:cursor-grabbing rounded-3xl"
     >
       <div className="pointer-events-none h-full w-full">
         <ProfileCard user={user} role={role} isPremium={isPremium} onUpgrade={onUpgrade} />
