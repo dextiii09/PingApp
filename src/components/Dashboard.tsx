@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { User, UserRole, Match, Notification } from '../types';
+import { User, UserRole } from '../types';
 import { GlassCard } from './GlassCard';
-import { Heart, Search, Zap, TrendingUp, LayoutGrid, Crown, ShieldCheck, ChevronRight, Briefcase, Settings } from 'lucide-react';
+import { Heart, Search, Zap, TrendingUp, LayoutGrid, Crown, ShieldCheck, ChevronRight, Briefcase, Settings, Clock } from 'lucide-react';
+import { api } from '../services/firebaseService';
+import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
-
 
 interface DashboardProps {
    user: User;
@@ -26,7 +27,50 @@ export const Dashboard: React.FC<DashboardProps> = ({
    newLikesCount,
    onUpdateUser
 }) => {
+   const [isBoosting, setIsBoosting] = useState(false);
 
+   const handleBoost = async () => {
+      if (isBoosting || !user.isPremium) return;
+
+      try {
+         setIsBoosting(true);
+         await api.activateBoost();
+
+         confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#f59e0b', '#fbbf24', '#ffffff']
+         });
+
+         // Trigger user update to refresh the dashboard
+         await onUpdateUser({ boostExpiresAt: Date.now() + 24 * 60 * 60 * 1000 });
+      } catch (err) {
+         console.error("Boost failed:", err);
+      } finally {
+         setIsBoosting(false);
+      }
+   };
+
+   const boostTimeRemaining = user.boostExpiresAt ? user.boostExpiresAt - Date.now() : 0;
+   const isBoostActive = boostTimeRemaining > 0;
+
+   const formatTime = (ms: number) => {
+      const hours = Math.floor(ms / (1000 * 60 * 60));
+      const mins = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+      return `${hours}h ${mins}m`;
+   };
+
+   // Calculate Real Profile Score based on completeness
+   const criteria = [
+      { met: !!user.name?.trim(), weight: 10 },
+      { met: user.avatar && !user.avatar.includes('placeholder') && !user.avatar.includes('ui-avatars'), weight: 15 },
+      { met: (user.bio?.length || 0) > 20, weight: 20 },
+      { met: user.tags?.length > 0, weight: 10 },
+      { met: !!user.introVideoUrl, weight: 35 },
+      { met: Object.values(user.socials || {}).some((v: any) => !!v), weight: 10 },
+   ];
+   const profilePercentage = criteria.reduce((acc, c) => acc + (c.met ? c.weight : 0), 0);
 
    return (
       <div className="flex flex-col h-full bg-white dark:bg-black overflow-y-auto no-scrollbar pb-32">
@@ -112,38 +156,79 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      </div>
                   </GlassCard>
 
-                  <div className="space-y-4">
-                     <GlassCard
-                        className="p-4 flex items-center justify-between h-[4.5rem] bg-gray-50 dark:bg-white/5"
-                        hoverEffect
-                        onClick={() => onNavigate('analytics')}
-                     >
-                        <div className="flex items-center gap-3">
-                           <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500"><TrendingUp size={18} /></div>
-                           <span className="text-sm font-bold text-gray-900 dark:text-white">Analytics</span>
+                  {/* Ping Reputation Card */}
+                  <GlassCard
+                     className="p-5 flex flex-col justify-between h-40 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 border-indigo-500/20 cursor-pointer"
+                     hoverEffect
+                     onClick={() => onNavigate('analytics')}
+                  >
+                     <div className="flex justify-between items-start">
+                        <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                           <ShieldCheck size={20} />
                         </div>
-                     </GlassCard>
+                        <div className="text-right">
+                           <span className="text-lg font-bold text-indigo-500">{profilePercentage}</span>
+                           <span className="text-[10px] text-gray-400 block uppercase font-bold tracking-tighter">Score</span>
+                        </div>
+                     </div>
+                     <div className="space-y-1">
+                        <div className="flex justify-between text-[10px] uppercase font-bold tracking-widest text-gray-400">
+                           <span>Profile score</span>
+                           <span>{profilePercentage}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
+                           <div className="h-full bg-indigo-500" style={{ width: `${profilePercentage}%` }}></div>
+                        </div>
+                     </div>
+                  </GlassCard>
+               </div>
+            </div>
 
-                     <GlassCard
-                        className="p-4 flex items-center justify-between h-[4.5rem] bg-gray-50 dark:bg-white/5"
-                        hoverEffect
-                        onClick={() => onNavigate(user.role === UserRole.BUSINESS ? 'analytics' : 'profile')}
-                     >
-                        <div className="flex items-center gap-3">
-                           <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
-                              {user.role === UserRole.BUSINESS ? <Briefcase size={18} /> : <LayoutGrid size={18} />}
-                           </div>
-                           <span className="text-sm font-bold text-gray-900 dark:text-white">
-                              {user.role === UserRole.BUSINESS ? 'Budget' : 'Media Kit'}
-                           </span>
-                        </div>
-                     </GlassCard>
+            {/* Live Briefs Banner (Phase 2 Feature) */}
+            <div
+               onClick={() => onNavigate('briefs')}
+               className="p-1 rounded-[2rem] bg-gradient-to-r from-orange-500/20 to-yellow-500/20 cursor-pointer group hover:scale-[1.02] transition-all"
+            >
+               <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl rounded-[1.8rem] p-5 flex items-center gap-4 border border-orange-500/20">
+                  <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center text-white shrink-0 shadow-lg shadow-orange-500/30 group-hover:rotate-12 transition-transform">
+                     <Zap size={24} fill="currentColor" />
                   </div>
+                  <div className="flex-1">
+                     <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-gray-900 dark:text-white">Live Briefs</h4>
+                        <span className="text-[10px] font-bold bg-orange-500 text-white px-1.5 py-0.5 rounded animate-pulse">LIVE</span>
+                     </div>
+                     <p className="text-xs text-gray-500 dark:text-white/40 font-medium">Apply to time-sensitive brand deals today.</p>
+                  </div>
+                  <ChevronRight className="text-gray-400" />
                </div>
             </div>
 
             {/* Action Banners */}
             <div className="space-y-4">
+               {user.isPremium && (
+                  <div
+                     onClick={isBoostActive ? undefined : handleBoost}
+                     className={`p-1 rounded-[2rem] bg-gradient-to-r ${isBoostActive ? 'from-green-500/20 to-emerald-500/20' : 'from-pink-500/20 to-orange-500/20'} cursor-pointer transform hover:scale-[1.02] transition-all`}
+                  >
+                     <div className={`bg-white/80 dark:bg-black/40 backdrop-blur-xl rounded-[1.8rem] p-5 flex items-center gap-4 border ${isBoostActive ? 'border-green-500/20' : 'border-pink-500/20'}`}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white shrink-0 shadow-lg ${isBoostActive ? 'bg-green-500 shadow-green-500/30' : 'bg-gradient-to-r from-pink-500 to-orange-400 shadow-pink-500/30'} ${isBoosting ? 'animate-pulse' : ''}`}>
+                           {isBoostActive ? <TrendingUp size={24} /> : <Zap size={24} fill="white" />}
+                        </div>
+                        <div className="flex-1">
+                           <h4 className="font-bold text-gray-900 dark:text-white">
+                              {isBoostActive ? 'Boost Active!' : 'Discovery Boost'}
+                           </h4>
+                           <p className="text-xs text-gray-500 dark:text-white/50">
+                              {isBoostActive ? `Ends in ${formatTime(boostTimeRemaining)}` : 'Get +500% more profile views.'}
+                           </p>
+                        </div>
+                        {!isBoostActive && <Zap size={20} className="text-pink-500 animate-bounce" />}
+                        {isBoostActive && <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>}
+                     </div>
+                  </div>
+               )}
+
                {!user.verified && (
                   <div className="p-1 rounded-[2rem] bg-gradient-to-r from-blue-500/20 to-cyan-500/20 cursor-pointer">
                      <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl rounded-[1.8rem] p-5 flex items-center gap-4 border border-blue-500/20">

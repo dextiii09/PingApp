@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { Button } from './Button';
-import { X, Crown, Check, Zap, Eye, BarChart3, Clock, Rocket, ShieldCheck, ChevronRight } from 'lucide-react';
+import { X, Crown, Check, Zap, Eye, BarChart3, Clock, Rocket, ShieldCheck, ChevronRight, Sparkles, Briefcase } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface PremiumPageProps {
@@ -14,12 +14,12 @@ export const PremiumPage: React.FC<PremiumPageProps> = ({ user, onClose, onUpgra
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
 
   const features = [
-    { icon: <Zap size={20} className="text-yellow-400" />, title: 'Unlimited Swipes', desc: 'Swipe as much as you want without daily limits.' },
-    { icon: <Eye size={20} className="text-pink-400" />, title: 'See Who Liked You', desc: 'Instantly match with people who already swiped right.' },
-    { icon: <BarChart3 size={20} className="text-blue-400" />, title: 'Audience Demographics', desc: 'Deep dive into age, location, and interests of your viewers.' },
-    { icon: <Rocket size={20} className="text-orange-400" />, title: 'Priority Placement', desc: 'Your profile gets shown first to top tier matches.' },
-    { icon: <Clock size={20} className="text-purple-400" />, title: 'Read Receipts', desc: 'Know exactly when your messages are seen.' },
-    { icon: <ShieldCheck size={20} className="text-green-400" />, title: 'Priority Support', desc: 'Jump the queue with 24/7 dedicated account assistance.' },
+    { icon: <Sparkles size={20} className="text-indigo-400" />, title: 'AI Match Insights & Bio', desc: 'Discover exactly why you match and let AI write your perfect bio.' },
+    { icon: <Rocket size={20} className="text-red-400" />, title: 'Priority Placement', desc: 'Your profile gets shown first to top tier matches to boost inbound interest.' },
+    { icon: <Eye size={20} className="text-pink-400" />, title: 'See Who Liked You', desc: 'Instantly match with people who already swiped right on your profile.' },
+    { icon: <Check size={20} className="text-green-400" />, title: 'Read Receipts', desc: 'See if your matches and prospective partners have read your proposals.' },
+    { icon: <BarChart3 size={20} className="text-blue-400" />, title: 'Audience Demographics', desc: 'Deep dive into age, location, and interests of your profile viewers.' },
+    { icon: <ShieldCheck size={20} className="text-emerald-400" />, title: 'Fast-Track Verification', desc: 'Skip the line and get your profile verified instantly for maximum trust.' },
   ];
 
   const monthlyPrice = 1490;

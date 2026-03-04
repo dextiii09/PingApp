@@ -18,6 +18,7 @@ import { Onboarding } from './components/Onboarding';
 import { PremiumPage } from './components/PremiumPage';
 import { NotificationsView } from './components/NotificationsView';
 import { BottomNav } from './components/BottomNav';
+import { LiveBriefsView } from './components/LiveBriefsView';
 // Add PLACEHOLDER_AVATAR to imports from constants
 import { APP_LOGO, PLACEHOLDER_AVATAR } from './constants';
 import { Check, Mail, Lock, ArrowRight, Sparkles, Briefcase, Camera, Globe, TrendingUp, CheckCircle, ChevronLeft, AlertCircle, Zap, Search, MessageCircle } from 'lucide-react';
@@ -80,7 +81,7 @@ const App = () => {
   });
 
   const [activeTab, setActiveTab] = useState<'home' | 'matches' | 'profile'>('home');
-  const [homeView, setHomeView] = useState<'dashboard' | 'deck' | 'analytics' | 'likes'>('dashboard');
+  const [homeView, setHomeView] = useState<'dashboard' | 'deck' | 'analytics' | 'likes' | 'briefs'>('dashboard');
 
   // Data State
   const [candidates, setCandidates] = useState<User[]>([]);
@@ -209,7 +210,7 @@ const App = () => {
     api.syncSession(user);
 
     try {
-      setIsDeckLoading(true);
+      if (candidates.length === 0) setIsDeckLoading(true);
 
       // Fetch data in parallel but handle individual failures gracefully
       const fetchResults = await Promise.allSettled([
@@ -294,6 +295,7 @@ const App = () => {
     if (v === 'deck') setHomeView('deck');
     if (v === 'analytics') setHomeView('analytics');
     if (v === 'likes') setHomeView('likes');
+    if (v === 'briefs') setHomeView('briefs');
     if (v === 'matches') setActiveTab('matches');
     if (v === 'profile') setActiveTab('profile');
   };
@@ -382,7 +384,7 @@ const App = () => {
       dEmail = 'hello@pixelarcade.co';
       setLoginRole(UserRole.BUSINESS);
     } else {
-      dEmail = 'jamie.travels@social.com';
+      dEmail = 'alex@fitness.fit';
       setLoginRole(UserRole.INFLUENCER);
     }
     setEmail(dEmail);
@@ -540,6 +542,17 @@ const App = () => {
                         <Button type="submit" fullWidth className={`h-16 text-lg rounded-full mt-2 shadow-xl shadow-pink-500/20 border-none ${buttonGradient}`}>
                           {isLoading ? 'Sending SMS...' : 'Send OTP Code'}
                         </Button>
+
+                        <div className="flex items-center py-2">
+                          <div className="flex-1 h-px bg-gray-100"></div>
+                          <span className="px-3 text-xs font-bold text-gray-400 uppercase tracking-widest">or skip verification</span>
+                          <div className="flex-1 h-px bg-gray-100"></div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
+                          <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
+                        </div>
                       </>
                     )
                   ) : (
@@ -605,6 +618,18 @@ const App = () => {
                 onUpgrade={() => handleOpenOverlay(setShowPremium)}
                 isDarkMode={isDarkMode}
               />
+            ) : homeView === 'briefs' ? (
+              <LiveBriefsView
+                key="briefs"
+                user={user}
+                onBack={() => setHomeView('dashboard')}
+                onNavigateToChat={(mid) => {
+                  const match = matches.find(m => m.id === mid);
+                  if (match) handleOpenMatch(match);
+                  else setActiveTab('matches');
+                }}
+                onUpgrade={() => handleOpenOverlay(setShowPremium)}
+              />
             ) : (
               <div key="deck" className="h-full w-full relative">
                 <SwipeDeck
@@ -620,6 +645,9 @@ const App = () => {
                   onSwipe={async (dir, candidateId) => {
                     try {
                       const result = await api.swipe(user.id, candidateId, dir);
+                      if (result.updatedCount !== undefined) {
+                        setDailySwipeCount(result.updatedCount);
+                      }
                       if (result.isMatch) await refreshData();
                       return result;
                     } catch (err: any) {
@@ -700,7 +728,7 @@ const App = () => {
             )}
           </div>
         )}
-        {activeTab === 'profile' && <EditProfile user={user} onSave={handleUpdateUser} onCancel={() => handleTabChange('home')} />}
+        {activeTab === 'profile' && <EditProfile user={user} onSave={handleUpdateUser} onCancel={() => handleTabChange('home')} onUpgrade={() => setShowPremium(true)} />}
       </div>
       <AnimatePresence>
         {isSettingsOpen && (<div className="fixed inset-0 z-[100] bg-black"><SettingsView user={user} onUpdateUser={handleUpdateUser} onBack={() => setIsSettingsOpen(false)} onLogout={handleLogout} onUpgrade={() => handleOpenOverlay(setShowPremium)} isDarkMode={isDarkMode} onToggleTheme={handleToggleTheme} /></div>)}

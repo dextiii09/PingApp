@@ -449,6 +449,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ user, onUpdateUser, 
               <Toggle active={settings.globalMode} onToggle={() => updateSetting('globalMode', !settings.globalMode)} />
             </div>
 
+            {/* Verified Only */}
+            <div className="w-full flex items-center justify-between p-4 border-b border-black/5 dark:border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-blue-500/10 text-blue-500"><Shield size={18} /></div>
+                <div>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white/90 block">Verified Profiles Only</span>
+                  <span className="text-xs text-gray-500 dark:text-white/50 block">Only see trust-vetted users</span>
+                </div>
+              </div>
+              <Toggle active={settings.verifiedOnly} onToggle={() => updateSetting('verifiedOnly', !settings.verifiedOnly)} />
+            </div>
+
             {/* Distance Slider */}
             {!settings.globalMode && (
               <div className="w-full p-4 border-b border-black/5 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">

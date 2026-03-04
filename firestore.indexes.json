@@ -1,0 +1,33 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "received_swipes",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "direction",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "seen",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "swipes",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "targetId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "direction",
+                    "order": "ASCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}

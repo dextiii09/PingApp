@@ -13,8 +13,6 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      // In a real production app, use Custom Claims for Admin verification (request.auth.token.admin == true)
-      // Since Ping App stores role in the document, we perform an extra read or rely on doc data safely.
       return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
     }
 
@@ -38,7 +36,9 @@ service cloud.firestore {
       
       match /swipes/{swipeId} {
         // Users can read/write their own outgoing swipes
-        allow read, create: if isOwner(userId);
+        // Users can ALSO read a swipe if they are the targetId (necessary for match checking)
+        allow read: if isOwner(userId) || (isAuthenticated() && resource.data.targetId == request.auth.uid);
+        allow create: if isOwner(userId);
         allow update, delete: if isAdmin();
       }
       
@@ -92,6 +92,46 @@ service cloud.firestore {
       
       // Deletion of matches
       allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid in resource.data.users);
+      
+      // Messages subcollection
+      match /messages/{messageId} {
+        // Users can read/write messages if they are part of the parent match
+        allow read, create: if isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/matches/$(matchId)).data.users;
+        allow update, delete: if isAdmin();
+      }
+    }
+    
+    // ------------------------------------------------------------------------
+    // 'contracts' collection (Phase 3)
+    // ------------------------------------------------------------------------
+    match /contracts/{matchId} {
+      // Only users involved in the contract can read or update it
+      // Note: matchId is usually influencerId_brandId
+      allow read, update: if isAuthenticated() && (
+        request.auth.uid in matchId.split('_') || 
+        (resource != null && request.auth.uid in resource.data.users)
+      );
+      
+      // Allow creation if the user is part of the match
+      allow create: if isAuthenticated() && request.auth.uid in request.resource.data.users;
+    }
+
+    // ------------------------------------------------------------------------
+    // 'live_briefs' collection (Phase 2)
+    // ------------------------------------------------------------------------
+    match /live_briefs/{briefId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && request.auth.uid == request.resource.data.brandId;
+      allow delete: if isAdmin() || (isAuthenticated() && request.auth.uid == resource.data.brandId);
+    }
+
+    // ------------------------------------------------------------------------
+    // 'proposals' collection (Deal Workflow)
+    // ------------------------------------------------------------------------
+    match /proposals/{proposalId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.senderId;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
     }
 
     // ------------------------------------------------------------------------

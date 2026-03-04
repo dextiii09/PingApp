@@ -20,6 +20,7 @@ export enum VerificationStatus {
 
 export interface UserSettings {
   globalMode?: boolean;
+  verifiedOnly?: boolean; // Phase 2: Show only verified profiles in Discovery
   maxDistance?: number;
   isVisible?: boolean;
   autoplay?: boolean;
@@ -53,12 +54,26 @@ export interface User {
   tags: string[];
   verified?: boolean; // Legacy simple boolean, mapped to VerificationStatus in logic
   isPremium?: boolean; // Feature Flag for Premium features like AI Insights
-  
+
   // New Features
   aiMatchScore?: number;
   aiMatchReason?: string;
   introVideoUrl?: string;
   portfolio?: string[]; // Media Kit / Content Portfolio
+  boostExpiresAt?: number; // Timestamp for Discovery Boost
+  mediaKitVideoUrl?: string; // High-quality intro/portfolio video
+  socialStats?: {
+    instagramFollowers?: string;
+    tiktokFollowers?: string;
+    youtubeSubscribers?: string;
+    avgEngagement?: string;
+  };
+
+  // Phase 3: Reputation & Trust & Monetization
+  pingScore?: number; // 0-100 trust metric
+  completionRate?: number; // % of contracts finished successfully
+  responseTime?: string; // e.g. "Under 2h"
+  totalEarnings?: number; // Total net earnings securely extracted from Escrow deals
 
   // Extended Profile Details
   jobTitle?: string;
@@ -102,13 +117,29 @@ export interface Message {
   text: string;
   timestamp: number;
   read: boolean;
-  type?: 'text' | 'proposal'; // Support different message types
+  type?: 'text' | 'proposal' | 'attachment' | 'contract'; // Support different message types
+  attachmentUrl?: string;
+  attachmentType?: 'image' | 'video' | 'file';
+  proposalId?: string; // Reference to a proposal document
   proposalData?: {
     title: string;
     price: string;
     deadline: string;
-    status?: 'PENDING' | 'ACCEPTED' | 'DECLINED';
+    status?: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED';
   };
+}
+
+export interface Proposal {
+  id: string;
+  matchId: string;
+  senderId: string;
+  receiverId: string;
+  title: string;
+  price: string;
+  deadline: string;
+  description: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED';
+  timestamp: number;
 }
 
 export interface Match {
@@ -118,6 +149,22 @@ export interface Match {
   lastSenderId?: string;
   lastActive: number;
   userProfile: User; // The profile of the OTHER person
+  aiMatchReason?: string; // Phase 2: Personalized explanation from Gemini
+}
+
+export interface LiveBrief {
+  id: string;
+  brandId: string;
+  brandName: string;
+  brandAvatar: string;
+  title: string;
+  description: string;
+  budget: string;
+  location: string;
+  deadline: number; // Expiry timestamp (e.g. 24h)
+  tags: string[];
+  applicationsCount: number;
+  timestamp: number;
 }
 
 export interface Contract {
@@ -129,8 +176,12 @@ export interface Contract {
     id: string;
     title: string;
     amount: number;
-    status: 'PAID' | 'PENDING' | 'LOCKED';
+    status: 'PAID' | 'PENDING' | 'LOCKED' | 'ESCROWED' | 'UNDER_REVIEW' | 'REVISION_REQUESTED';
+    description?: string;
+    contentUrl?: string; // Submitted work
+    feedback?: string; // Brand notes
   }[];
+  contractUrl?: string;
 }
 
 export enum SwipeDirection {
@@ -145,4 +196,8 @@ export interface AdminStats {
   revenue: number;
   activeMatches: number;
   pendingVerifications: number;
+  trends?: {
+    dailyUsers: { date: string, count: number }[];
+    dailyMatches: { date: string, count: number }[];
+  };
 }

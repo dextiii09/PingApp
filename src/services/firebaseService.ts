@@ -331,6 +331,11 @@ class FirebaseService {
     const targetRole = userRole === UserRole.BUSINESS ? UserRole.INFLUENCER : UserRole.BUSINESS;
 
     try {
+      // 1. Fetch already swiped users to filter them out
+      const swipesRef = collection(db, "users", this.currentUser.id, "swipes");
+      const swipesSnap = await getDocs(swipesRef).catch(() => ({ docs: [] }));
+      const swipedUserIds = new Set(swipesSnap.docs.map(skipDoc => skipDoc.id));
+
       const receivedSwipesRef = collection(db, "users", this.currentUser.id, "received_swipes");
       const superLikeQuery = query(receivedSwipesRef, where("direction", "==", "up"), where("seen", "==", false));
       const superLikeDocs = await getDocs(superLikeQuery).catch(() => ({ docs: [] }));
@@ -342,12 +347,12 @@ class FirebaseService {
       const priorityCandidates: User[] = [];
 
       querySnapshot.forEach((doc) => {
-        if (doc.id !== this.currentUser?.id) {
+        if (doc.id !== this.currentUser?.id && !swipedUserIds.has(doc.id)) {
           // IMPORTANT: Explicitly merge the document ID to ensure frontend filtering works reliably
           const userData = { id: doc.id, ...doc.data() } as User;
 
           // Verified Only filter (Phase 2)
-          if (this.currentUser.settings?.verifiedOnly && userData.verificationStatus !== VerificationStatus.VERIFIED) {
+          if (this.currentUser!.settings?.verifiedOnly && userData.verificationStatus !== VerificationStatus.VERIFIED) {
             return;
           }
 
@@ -395,8 +400,8 @@ class FirebaseService {
 
   async swipe(userId: string, candidateId: string, direction: 'left' | 'right' | 'up'): Promise<{ isMatch: boolean; match?: Match; updatedCount?: number }> {
     this.checkConfig();
-    const swipeRef = collection(db, "users", userId, "swipes");
-    await addDoc(swipeRef, { targetId: candidateId, direction, timestamp: Date.now() });
+    const swipeRef = doc(db, "users", userId, "swipes", candidateId);
+    await setDoc(swipeRef, { targetId: candidateId, direction, timestamp: Date.now() }, { merge: true });
 
     let updatedCount = 0;
     if (!this.currentUser?.isPremium && direction !== 'left') {
@@ -506,6 +511,9 @@ class FirebaseService {
     return onSnapshot(q, (snapshot) => {
       const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       callback(messages);
+    }, (error) => {
+      console.error("Messages Subscription Error:", error);
+      callback([]); // Failsafe to stop loading UI
     });
   }
 
@@ -601,13 +609,38 @@ class FirebaseService {
       });
     }
 
-    // 3. Notify the other party
+    // 3. Notify the other party & Create Contract if accepted
     const proposalSnap = await getDoc(proposalRef);
     if (proposalSnap.exists()) {
       const pData = proposalSnap.data() as Proposal;
       const targetId = this.currentUser.id === pData.senderId ? pData.receiverId : pData.senderId;
       const verb = status === 'ACCEPTED' ? 'accepted' : status === 'DECLINED' ? 'declined' : 'cancelled';
       await this.createNotification(targetId, 'system', `Proposal ${status}`, `${this.currentUser.name} has ${verb} the proposal: ${pData.title}`);
+
+      if (status === 'ACCEPTED') {
+        // Auto-generate contract
+        const priceNum = parseInt(pData.price.replace(/[^0-9]/g, ''), 10) || 0;
+        await this.createContract(matchId, pData.title, priceNum, [
+          {
+            id: 'ms-1',
+            title: 'Final Deliverable',
+            amount: priceNum,
+            status: 'LOCKED',
+            dueDate: pData.deadline
+          }
+        ]);
+
+        // Drop contract into chat thread
+        await this.sendMessage(matchId, `CONTRACT CREATED: ${pData.title}`, {
+          type: 'contract',
+          proposalData: {
+            title: pData.title,
+            price: pData.price,
+            status: 'ACCEPTED',
+            deadline: pData.deadline
+          }
+        });
+      }
     }
   }
 
@@ -722,7 +755,8 @@ class FirebaseService {
       const q = query(collection(db, "users", this.currentUser.id, "received_swipes"), where("seen", "==", false));
       const snap = await getDocs(q);
       const unmatchedUnseen = snap.docs.filter(d => !d.data().matched);
-      return unmatchedUnseen.length;
+      const uniqueSenders = new Set(unmatchedUnseen.map(d => d.data().fromUserId || d.id));
+      return uniqueSenders.size;
     } catch (e) {
       return 0;
     }
@@ -737,12 +771,15 @@ class FirebaseService {
       const snap = await getDocs(q);
 
       const likes: { profile: User, timestamp: number }[] = [];
+      const processedSenderIds = new Set<string>();
+
       for (const docSnap of snap.docs) {
         const data = docSnap.data();
         if (data.matched) continue; // Don't show already matched people here
 
         const senderId = data.fromUserId || docSnap.id;
-        if (!senderId) continue;
+        if (!senderId || processedSenderIds.has(senderId)) continue;
+        processedSenderIds.add(senderId);
 
         const profileSnap = await getDoc(doc(db, "users", senderId));
         if (profileSnap.exists()) {
@@ -778,10 +815,11 @@ class FirebaseService {
     if (!isConfigured || !db) return fallback;
 
     try {
-      // 1. Profile Views (Total received swipes)
+      // 1. Profile Views (Total unique received swipes)
       const receivedRef = collection(db, "users", userId, "received_swipes");
       const receivedSnap = await getDocs(receivedRef);
-      const profileViews = receivedSnap.size;
+      const uniqueViews = new Set(receivedSnap.docs.map(d => d.data().fromUserId || d.id));
+      const profileViews = uniqueViews.size;
 
       // 2. Match Rate = (Matches / Total Swipes Performed) * 100
       const swipesRef = collection(db, "users", userId, "swipes");
@@ -924,16 +962,46 @@ class FirebaseService {
 
       await updateDoc(contractRef, { milestones: updatedMilestones });
 
-      // Notification
+      // Notification & Earnings Calculation
       const otherUserId = matchId.split('_').find(id => id !== this.currentUser?.id);
       if (otherUserId) {
         await this.createNotification(otherUserId, 'system', "Payment Released!", `Your milestone payment for "${data.title}" has been released.`);
 
-        // Update Ping Score on completion
+        // Handle Completion & 10% Platform Cut
         const allPaid = updatedMilestones.every((m: any) => m.status === 'PAID');
         if (allPaid) {
+          // Calculate 90/10 Split
+          const totalDealValue = data.totalAmount;
+          const influencerCut = totalDealValue * 0.9;
+          const platformFee = totalDealValue * 0.1;
+
+          // Record Influencer Earnings
+          const influencerRef = doc(db, "users", otherUserId);
+          const influencerSnap = await getDoc(influencerRef);
+          if (influencerSnap.exists()) {
+            const currentEarnings = influencerSnap.data().totalEarnings || 0;
+            await updateDoc(influencerRef, {
+              totalEarnings: currentEarnings + influencerCut
+            });
+          }
+
+          // Record Platform Fee (Optional: Save to a master 'platform_revenue' collection)
+          try {
+            await addDoc(collection(db, "platform_revenue"), {
+              matchId,
+              contractId: contractRef.id,
+              totalAmount: totalDealValue,
+              influencerCut,
+              platformFee,
+              timestamp: Date.now()
+            });
+          } catch (e) {
+            console.error("Failed to log platform revenue", e);
+          }
+
+          // Update Reputations
           this.updatePingScore(this.currentUser.id);
-          if (otherUserId) this.updatePingScore(otherUserId);
+          this.updatePingScore(otherUserId);
         }
       }
     }

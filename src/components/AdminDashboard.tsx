@@ -300,6 +300,15 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
     ]);
     setStats(s);
     setUsers(u);
+
+    if (s.trends) {
+      setSparklines({
+        users: s.trends.dailyUsers.map(d => ({ value: d.count })),
+        revenue: generateSparklineData(5000, 1000), // Revenue still mock as no real payments yet
+        matches: s.trends.dailyMatches.map(d => ({ value: d.count })),
+        verifications: generateSparklineData(10, 5)
+      });
+    }
     setIsLoading(false);
   };
 
@@ -317,7 +326,7 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
         ? { ...u, verificationStatus: approved ? VerificationStatus.VERIFIED : VerificationStatus.REJECTED }
         : u
     ));
-    await api.verifyUser(userId, approved);
+    await api.verifyUser(userId, approved ? VerificationStatus.VERIFIED : VerificationStatus.REJECTED);
     setRejectingUser(null);
     api.getAdminStats().then(setStats); // Refresh stats
   };
@@ -530,10 +539,10 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         </div>
                       </div>
                       <div className="flex-1 flex items-end gap-1 px-2 border-b border-white/5 pb-2">
-                        {[30, 45, 35, 60, 55, 70, 85, 80, 95, 100, 90, 110, 95, 105, 115, 120].map((h, i) => (
-                          <div key={i} className="flex-1 bg-cyan-500/20 hover:bg-cyan-400/80 transition-all duration-300 relative group" style={{ height: `${h * 0.7}%` }}>
+                        {stats.trends?.dailyMatches.map((d, i) => (
+                          <div key={i} className="flex-1 bg-cyan-500/20 hover:bg-cyan-400/80 transition-all duration-300 relative group" style={{ height: `${Math.max(10, d.count * 10)}%` }}>
                             <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-[9px] px-2 py-1 border border-cyan-500/30 text-cyan-400 font-mono whitespace-nowrap z-10 pointer-events-none">
-                              DATA: {h * 12}
+                              {d.date}: {d.count} MATCHES
                             </div>
                           </div>
                         ))}
