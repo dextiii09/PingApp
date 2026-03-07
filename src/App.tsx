@@ -532,101 +532,27 @@ const App = () => {
               <motion.div key="form" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="pt-2">
                 <div className="flex items-center mb-6">
                   <button onClick={() => setShowAuthForm(false)} className="p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors"><ChevronLeft size={24} /></button>
-                  <h2 className="text-2xl font-bold text-gray-900 ml-2">{authMode === 'signin' ? 'Welcome Back' : 'Create Account'}</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 ml-2">Welcome</h2>
                 </div>
                 {authError && (
                   <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold"><AlertCircle size={14} />{authError}</div>
                 )}
-                <form onSubmit={handleLogin} className="space-y-5">
-                  {authMode === 'signup' ? (
-                    verificationId ? (
-                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6 space-y-4">
-                        <div className="w-16 h-16 bg-pink-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-pink-100 shadow-sm">
-                          <CheckCircle className="text-pink-500" size={32} />
-                        </div>
-                        <h3 className="text-2xl font-bold text-gray-900">Enter OTP Code</h3>
-                        <p className="text-gray-500 text-sm leading-relaxed max-w-[250px] mx-auto">
-                          We've sent an SMS code to <br />
-                          <span className="font-bold text-gray-900 text-base">{phoneNumber}</span>
-                        </p>
-                        <div className="space-y-1.5 pt-2">
-                          <input type="text" value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))} className="w-full text-center tracking-[0.5em] bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-bold text-xl" placeholder="123456" maxLength={6} required />
-                        </div>
-                        <Button type="submit" fullWidth className={`h-16 text-lg rounded-full mt-4 shadow-xl shadow-pink-500/20 border-none ${buttonGradient}`}>
-                          {isLoading ? 'Verifying...' : 'Verify Code'}
-                        </Button>
-                        <Button type="button" onClick={() => setVerificationId(null)} variant="ghost" className="mt-2 text-pink-500 hover:bg-pink-50">
-                          Use a different number
-                        </Button>
-                      </motion.div>
-                    ) : (
-                      <>
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-wider">Phone Number (with country code)</label>
-                          <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="+1234567890" required />
-                        </div>
-                        <Button type="submit" fullWidth className={`h-16 text-lg rounded-full mt-2 shadow-xl shadow-pink-500/20 border-none ${buttonGradient}`}>
-                          {isLoading ? 'Sending SMS...' : 'Send OTP Code'}
-                        </Button>
+                <div className="space-y-5 pt-4">
+                  <button type="button" onClick={handleMetaLogin} className="w-full h-14 bg-[#1877F2] hover:bg-[#166FE5] text-white font-bold rounded-full transition-colors flex items-center justify-center gap-2 shadow-md mb-2">
+                    <Facebook size={20} fill="currentColor" className="text-white" /> Continue with Meta
+                  </button>
 
-                        <div className="flex items-center py-2">
-                          <div className="flex-1 h-px bg-gray-100"></div>
-                          <span className="px-3 text-xs font-bold text-gray-400 uppercase tracking-widest">or skip verification</span>
-                          <div className="flex-1 h-px bg-gray-100"></div>
-                        </div>
-
-                        <button type="button" onClick={handleMetaLogin} className="w-full h-14 bg-[#1877F2] hover:bg-[#166FE5] text-white font-bold rounded-full transition-colors flex items-center justify-center gap-2 shadow-md mb-2">
-                          <Facebook size={20} fill="currentColor" className="text-white" /> Continue with Meta
-                        </button>
-
-                        <div className="flex gap-2 mt-2">
-                          <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
-                          <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
-                        </div>
-                      </>
-                    )
-                  ) : (
-                    <>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-gray-500 ml-1 uppercase tracking-wider">Email Address</label>
-                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="name@example.com" required />
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between items-center ml-1">
-                          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
-                          <button type="button" className="text-xs font-bold text-pink-500">Forgot?</button>
-                        </div>
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-100 transition-all font-medium text-base" placeholder="••••••••" required />
-                      </div>
-                      <Button type="submit" fullWidth className={`h-16 text-lg rounded-full mt-2 shadow-xl shadow-pink-500/20 border-none ${buttonGradient}`}>
-                        {isLoading ? 'Processing...' : 'Sign In'}
-                      </Button>
-
-                      <div className="flex items-center py-2">
-                        <div className="flex-1 h-px bg-gray-100"></div>
-                        <span className="px-3 text-xs font-bold text-gray-400 uppercase tracking-widest">or</span>
-                        <div className="flex-1 h-px bg-gray-100"></div>
-                      </div>
-
-                      <button type="button" onClick={handleMetaLogin} className="w-full h-14 bg-[#1877F2] hover:bg-[#166FE5] text-white font-bold rounded-full transition-colors flex items-center justify-center gap-2 shadow-md">
-                        <Facebook size={20} fill="currentColor" className="text-white" /> Continue with Meta
-                      </button>
-
-                      <div className="flex gap-2 pt-2">
-                        <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
-                        <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
-                      </div>
-                    </>
-                  )}
-                  <div className="text-center pt-2">
-                    <p className="text-sm text-gray-500 font-medium">
-                      {authMode === 'signin' ? "Don't have an account?" : "Already have an account?"} {' '}
-                      <button type="button" onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); setAuthError(null); setVerificationId(null); }} className="text-gray-900 font-bold hover:underline">
-                        {authMode === 'signin' ? 'Sign up with Phone' : 'Log in with Email'}
-                      </button>
-                    </p>
+                  <div className="flex items-center py-4">
+                    <div className="flex-1 h-px bg-gray-100"></div>
+                    <span className="px-3 text-xs font-bold text-gray-400 uppercase tracking-widest">or try a demo</span>
+                    <div className="flex-1 h-px bg-gray-100"></div>
                   </div>
-                </form>
+
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
+                    <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
+                  </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
