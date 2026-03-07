@@ -19,9 +19,13 @@ import { PremiumPage } from './components/PremiumPage';
 import { NotificationsView } from './components/NotificationsView';
 import { BottomNav } from './components/BottomNav';
 import { LiveBriefsView } from './components/LiveBriefsView';
+import { RequestsView } from './components/RequestsView';
+import { PrivacyPolicy } from './components/PrivacyPolicy';
+import { TermsOfService } from './components/TermsOfService';
+import { DataDeletion } from './components/DataDeletion';
 // Add PLACEHOLDER_AVATAR to imports from constants
 import { APP_LOGO, PLACEHOLDER_AVATAR } from './constants';
-import { Check, Mail, Lock, ArrowRight, Sparkles, Briefcase, Camera, Globe, TrendingUp, CheckCircle, ChevronLeft, AlertCircle, Zap, Search, MessageCircle } from 'lucide-react';
+import { Check, Mail, Lock, ArrowRight, Sparkles, Briefcase, Camera, Globe, TrendingUp, CheckCircle, ChevronLeft, AlertCircle, Zap, Search, MessageCircle, Facebook } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { App as CapApp } from '@capacitor/app';
 import { PushNotifications } from '@capacitor/push-notifications';
@@ -66,7 +70,13 @@ const App = () => {
     }
   });
 
-  const [view, setView] = useState<'landing' | 'login' | 'onboarding' | 'app' | 'admin'>(() => {
+  const [view, setView] = useState<'landing' | 'login' | 'onboarding' | 'app' | 'admin' | 'privacy' | 'terms' | 'data-deletion'>(() => {
+    // Deep linking for compliance pages
+    const path = window.location.pathname;
+    if (path === '/privacy') return 'privacy';
+    if (path === '/terms') return 'terms';
+    if (path === '/data-deletion') return 'data-deletion';
+
     const saved = localStorage.getItem('ping_session_user');
     if (saved) {
       try {
@@ -81,7 +91,7 @@ const App = () => {
   });
 
   const [activeTab, setActiveTab] = useState<'home' | 'matches' | 'profile'>('home');
-  const [homeView, setHomeView] = useState<'dashboard' | 'deck' | 'analytics' | 'likes' | 'briefs'>('dashboard');
+  const [homeView, setHomeView] = useState<'dashboard' | 'deck' | 'analytics' | 'likes' | 'briefs' | 'requests'>('dashboard');
 
   // Data State
   const [candidates, setCandidates] = useState<User[]>([]);
@@ -296,6 +306,7 @@ const App = () => {
     if (v === 'analytics') setHomeView('analytics');
     if (v === 'likes') setHomeView('likes');
     if (v === 'briefs') setHomeView('briefs');
+    if (v === 'requests') setHomeView('requests');
     if (v === 'matches') setActiveTab('matches');
     if (v === 'profile') setActiveTab('profile');
   };
@@ -372,6 +383,21 @@ const App = () => {
       if (err.code === 'auth/internal-error' && err.message.includes('recaptcha')) msg = "Recaptcha verification failed. Try again.";
       if (err.message) msg = err.message.replace('Firebase:', '');
       setAuthError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMetaLogin = async () => {
+    setIsLoading(true);
+    setAuthError(null);
+    try {
+      const loggedUser = await api.loginWithMeta(loginRole);
+      setUser(loggedUser);
+      setView('app');
+    } catch (err: any) {
+      console.error(err);
+      setAuthError(err.message ? err.message.replace('Firebase:', '') : "Meta login failed.");
     } finally {
       setIsLoading(false);
     }
@@ -549,7 +575,11 @@ const App = () => {
                           <div className="flex-1 h-px bg-gray-100"></div>
                         </div>
 
-                        <div className="flex gap-2">
+                        <button type="button" onClick={handleMetaLogin} className="w-full h-14 bg-[#1877F2] hover:bg-[#166FE5] text-white font-bold rounded-full transition-colors flex items-center justify-center gap-2 shadow-md mb-2">
+                          <Facebook size={20} fill="currentColor" className="text-white" /> Continue with Meta
+                        </button>
+
+                        <div className="flex gap-2 mt-2">
                           <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
                           <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
                         </div>
@@ -571,6 +601,17 @@ const App = () => {
                       <Button type="submit" fullWidth className={`h-16 text-lg rounded-full mt-2 shadow-xl shadow-pink-500/20 border-none ${buttonGradient}`}>
                         {isLoading ? 'Processing...' : 'Sign In'}
                       </Button>
+
+                      <div className="flex items-center py-2">
+                        <div className="flex-1 h-px bg-gray-100"></div>
+                        <span className="px-3 text-xs font-bold text-gray-400 uppercase tracking-widest">or</span>
+                        <div className="flex-1 h-px bg-gray-100"></div>
+                      </div>
+
+                      <button type="button" onClick={handleMetaLogin} className="w-full h-14 bg-[#1877F2] hover:bg-[#166FE5] text-white font-bold rounded-full transition-colors flex items-center justify-center gap-2 shadow-md">
+                        <Facebook size={20} fill="currentColor" className="text-white" /> Continue with Meta
+                      </button>
+
                       <div className="flex gap-2 pt-2">
                         <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
                         <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
@@ -591,11 +632,26 @@ const App = () => {
           </AnimatePresence>
           {/* Invisible Recaptcha Container must live outside animated/conditional routing */}
           <div id="recaptcha-container"></div>
-          {!showAuthForm && (<div className="mt-8 text-center"><p className="text-[10px] text-gray-300 uppercase tracking-[0.2em] font-medium">Ping App by Reachup Media</p></div>)}
+          {!showAuthForm && (
+            <div className="mt-8 text-center">
+              <p className="text-[10px] text-gray-300 uppercase tracking-[0.2em] font-medium mb-3">Ping App by Reachup Media</p>
+              <div className="flex items-center justify-center gap-4 text-xs font-bold text-gray-400">
+                <button onClick={() => setView('privacy')} className="hover:text-gray-900 transition-colors">Privacy Policy</button>
+                <span className="w-1 h-1 rounded-full bg-gray-200"></span>
+                <button onClick={() => setView('terms')} className="hover:text-gray-900 transition-colors">Terms of Service</button>
+                <span className="w-1 h-1 rounded-full bg-gray-200"></span>
+                <button onClick={() => setView('data-deletion')} className="hover:text-gray-900 transition-colors">Data Deletion</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
   }
+
+  if (view === 'privacy') return <PrivacyPolicy onBack={() => setView('landing')} />;
+  if (view === 'terms') return <TermsOfService onBack={() => setView('landing')} />;
+  if (view === 'data-deletion') return <DataDeletion onBack={() => setView('landing')} />;
 
   if (view === 'admin') return <AdminDashboard onLogout={handleLogout} />;
   if (view === 'onboarding' && user) return <Onboarding role={user.role} onBack={handleLogout} onComplete={() => setView('app')} />;
@@ -629,6 +685,15 @@ const App = () => {
                   else setActiveTab('matches');
                 }}
                 onUpgrade={() => handleOpenOverlay(setShowPremium)}
+              />
+            ) : homeView === 'requests' ? (
+              <RequestsView
+                key="requests"
+                user={user}
+                onBack={() => setHomeView('dashboard')}
+                onMatchCreated={(match) => {
+                  handleOpenMatch(match);
+                }}
               />
             ) : (
               <div key="deck" className="h-full w-full relative">
@@ -687,9 +752,15 @@ const App = () => {
                 <p className={`text-center text-sm max-w-[280px] leading-relaxed font-bold mb-10 ${isDarkMode ? 'text-white/40' : 'text-gray-400'}`}>
                   When you match with someone, you'll be able to send them a message here.
                 </p>
-                <Button onClick={() => { setActiveTab('home'); setHomeView('deck'); }} className="h-14 w-56 rounded-full shadow-2xl shadow-pink-500/20 bg-gradient-to-r from-pink-500 to-orange-400 border-none text-white text-lg font-bold">
-                  Find Matches <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
+                {user.role === UserRole.INFLUENCER ? (
+                  <button onClick={() => { setHomeView('requests'); setActiveTab('home'); }} className="h-14 w-56 rounded-full shadow-2xl shadow-green-500/20 bg-gradient-to-r from-emerald-500 to-green-400 border-none text-white text-lg font-bold flex items-center justify-center mx-auto">
+                    Check Inbox <ArrowRight className="ml-2 w-5 h-5" />
+                  </button>
+                ) : (
+                  <button onClick={() => { setActiveTab('home'); setHomeView('deck'); }} className="h-14 w-56 rounded-full shadow-2xl shadow-pink-500/20 bg-gradient-to-r from-pink-500 to-orange-400 border-none text-white text-lg font-bold flex items-center justify-center mx-auto">
+                    Find Matches <ArrowRight className="ml-2 w-5 h-5" />
+                  </button>
+                )}
               </div>
             ) : (
               <div className="flex-1 px-4 mt-2">
