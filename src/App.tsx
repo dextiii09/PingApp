@@ -29,6 +29,7 @@ import { Check, Mail, Lock, ArrowRight, Sparkles, Briefcase, Camera, Globe, Tren
 import { motion, AnimatePresence } from 'framer-motion';
 import { App as CapApp } from '@capacitor/app';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from '@clerk/clerk-react';
 
 // Toast Component
 const Toast = ({ message, onClose }: { message: string, onClose: () => void }) => {
@@ -501,11 +502,18 @@ const App = () => {
             <img src={APP_LOGO} alt="Ping Logo" className="w-10 h-10 rounded-xl shadow-lg shadow-blue-500/20" />
             <span className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-400 tracking-tight">Ping</span>
           </div>
-          {!showAuthForm && (
-            <button onClick={() => { setAuthMode('signin'); setShowAuthForm(true); setAuthError(null); }} className="flex items-center gap-2 text-gray-600 font-bold text-sm hover:text-gray-900 transition-colors">
-              <Lock size={16} /> Log in
-            </button>
-          )}
+          <div className="flex items-center gap-4">
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="flex items-center gap-2 text-gray-600 font-bold text-sm hover:text-gray-900 transition-colors">
+                  <Lock size={16} /> Log in
+                </button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </div>
         </div>
         <div className="flex-1" />
         <div className="bg-white w-full rounded-t-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.05)] p-8 pb-12 relative z-10 animate-in slide-in-from-bottom duration-500">
@@ -525,7 +533,14 @@ const App = () => {
                   </p>
                 </motion.div>
                 <motion.div variants={itemVariants as any}>
-                  <Button onClick={() => { setAuthMode('signup'); setShowAuthForm(true); setAuthError(null); }} fullWidth className={`h-16 text-lg rounded-full shadow-xl shadow-pink-500/20 ${buttonGradient} border-none`} animate={{ scale: [1, 1.02, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>Get Started <ArrowRight className="ml-2" /></Button>
+                  <SignedOut>
+                    <SignUpButton mode="modal">
+                      <Button fullWidth className={`h-16 text-lg rounded-full shadow-xl shadow-pink-500/20 ${buttonGradient} border-none`} animate={{ scale: [1, 1.02, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}>Get Started <ArrowRight className="ml-2" /></Button>
+                    </SignUpButton>
+                  </SignedOut>
+                  <SignedIn>
+                    <Button onClick={() => setView('app')} fullWidth className={`h-16 text-lg rounded-full shadow-xl shadow-pink-500/20 ${buttonGradient} border-none`}>Go to App <ArrowRight className="ml-2" /></Button>
+                  </SignedIn>
                 </motion.div>
               </motion.div>
             ) : (

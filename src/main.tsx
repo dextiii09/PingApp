@@ -23,6 +23,10 @@ window.onerror = (message, source, lineno, colno, error) => {
   }
 };
 
+import { ClerkProvider } from '@clerk/clerk-react';
+
+const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "pk_test_cmF0aW9uYWwtamF3ZmlzaC05My5jbGVyay5hY2NvdW50cy5kZXYk";
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
@@ -31,8 +35,10 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </ClerkProvider>
   </React.StrictMode>
 );
