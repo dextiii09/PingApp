@@ -187,57 +187,39 @@ const MatchOverlay: React.FC<{ candidate: User; isPremium?: boolean; onUpgrade?:
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/95 backdrop-blur-3xl p-6"
+    className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/60 backdrop-blur-md p-6"
   >
-    {/* Cinematic Background Glow */}
-    <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center">
-      <div className="absolute w-[80vw] h-[80vw] max-w-[600px] max-h-[600px] bg-pink-500/20 rounded-full blur-[120px] mix-blend-screen animate-pulse"></div>
-      <div className="absolute w-[60vw] h-[60vw] max-w-[400px] max-h-[400px] bg-orange-400/20 rounded-full blur-[100px] mix-blend-screen animate-pulse" style={{ animationDelay: '1s' }}></div>
-      {[...Array(20)].map((_, i) => (
-        <motion.div
-          key={i}
-          initial={{ y: -10, x: Math.random() * window.innerWidth, opacity: 1 }}
-          animate={{ y: window.innerHeight + 10, rotate: 360 }}
-          transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, ease: "linear" }}
-          className="absolute w-1.5 h-1.5 bg-gradient-to-tr from-pink-500 to-yellow-500 rounded-full shadow-[0_0_10px_rgba(236,72,153,0.8)]"
-        />
-      ))}
-    </div>
-
     <motion.div
-      initial={{ scale: 0.8, opacity: 0, y: 20 }}
+      initial={{ scale: 0.9, opacity: 0, y: 20 }}
       animate={{ scale: 1, opacity: 1, y: 0 }}
-      transition={{ type: "spring", damping: 20, stiffness: 100 }}
-      className="text-center space-y-8 relative z-10 w-full max-w-sm"
+      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+      className="bg-white dark:bg-[#1a1a1a] rounded-3xl p-8 text-center space-y-6 relative z-10 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-white/10"
     >
-      <div className="font-mono text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-orange-400 font-black tracking-[0.3em] text-2xl animate-pulse drop-shadow-[0_0_15px_rgba(236,72,153,0.5)]">IT'S A MATCH!</div>
+      <div className="text-blue-500 font-bold tracking-[0.2em] text-sm uppercase">NEW CONNECTION</div>
 
       <div className="flex items-center justify-center gap-0">
-        <div className="w-28 h-28 rounded-full border-4 border-black relative overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.2)] pointer-events-none z-10 translate-x-4">
+        <div className="w-24 h-24 rounded-full border-4 border-white dark:border-[#1a1a1a] relative overflow-hidden shadow-lg z-10 translate-x-3">
           <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop" className="w-full h-full object-cover" alt="user" />
-          <div className="absolute inset-0 ring-inset ring-2 ring-white/20 rounded-full"></div>
         </div>
-        <div className="w-32 h-32 rounded-full border-4 border-pink-500 relative overflow-hidden shadow-[0_0_50px_rgba(236,72,153,0.6)] pointer-events-none z-20">
+        <div className="w-28 h-28 rounded-full border-4 border-white dark:border-[#1a1a1a] relative overflow-hidden shadow-xl z-20">
           <img src={candidate.avatar} className="w-full h-full object-cover" alt="match" />
-          <div className="absolute inset-0 ring-inset ring-2 ring-white/20 rounded-full"></div>
         </div>
       </div>
 
       <div>
-        <h2 className="text-4xl font-extrabold text-white mb-3 drop-shadow-lg tracking-tight">You & {candidate.name}</h2>
+        <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">{candidate.name}</h2>
         {candidate.aiMatchReason ? (
-          <div className="bg-white/10 border border-white/20 rounded-2xl p-5 mt-6 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
-            <p className="text-[11px] text-pink-400 font-bold uppercase tracking-[0.2em] mb-3 flex items-center justify-center gap-1.5 drop-shadow-sm"><Sparkles size={14} className="animate-pulse" /> AI Match Insight</p>
+          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-500/20 rounded-xl p-4 mt-4 relative overflow-hidden">
+            <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest mb-2 flex items-center justify-center gap-1.5"><Sparkles size={12} /> AI Insight</p>
             {isPremium ? (
-              <p className="text-white/95 text-sm font-medium leading-relaxed">{candidate.aiMatchReason}</p>
+              <p className="text-gray-700 dark:text-white/90 text-sm font-medium leading-relaxed">{candidate.aiMatchReason}</p>
             ) : (
-              <div className="flex flex-col items-center gap-3 mt-2">
-                <p className="text-white/80 text-sm font-medium leading-relaxed blur-[6px] select-none pointer-events-none opacity-60">
-                  This is a highly personalized reason explaining why you two are a perfect match based on deep data analysis from Ping AI.
+              <div className="flex flex-col items-center gap-3">
+                <p className="text-gray-400 dark:text-white/40 text-sm font-medium leading-relaxed blur-[4px] select-none pointer-events-none">
+                  This is a highly personalized reason explaining why you two are a perfect match based on deep data analysis.
                 </p>
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
-                  <button onClick={onUpgrade} className="bg-gradient-to-r from-pink-500 to-orange-400 hover:from-pink-600 hover:to-orange-500 text-white text-xs font-bold px-6 py-3 rounded-full flex items-center gap-2 shadow-[0_0_20px_rgba(236,72,153,0.4)] transition-all hover:scale-105">
+                <div className="absolute inset-0 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-[2px]">
+                  <button onClick={onUpgrade} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-6 py-2.5 rounded-full flex items-center gap-2 shadow-sm transition-transform hover:scale-105">
                     <Lock size={14} /> Unlock Insight
                   </button>
                 </div>
@@ -245,16 +227,16 @@ const MatchOverlay: React.FC<{ candidate: User; isPremium?: boolean; onUpgrade?:
             )}
           </div>
         ) : (
-          <p className="text-white/60 text-lg font-medium">vibe with each other.</p>
+          <p className="text-gray-500 dark:text-white/60 text-sm font-medium">A potential collaboration awaits.</p>
         )}
       </div>
 
-      <div className="flex flex-col gap-4 w-full max-w-[280px] mx-auto pt-4">
-        <Button fullWidth onClick={onChat} className="flex items-center gap-2 justify-center py-4 text-[15px] shadow-[0_0_20px_rgba(255,255,255,0.2)]">
-          Send Message
+      <div className="flex flex-col gap-3 w-full pt-2">
+        <Button fullWidth onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); onChat(); }} className="py-3 shadow-md">
+          Message Now
         </Button>
-        <button onClick={onClose} className="w-full py-4 text-white/50 font-bold text-sm tracking-wider uppercase hover:text-white transition-colors">
-          Keep Swiping
+        <button onClick={onClose} className="w-full py-3 text-gray-400 hover:text-gray-600 dark:hover:text-white font-bold text-xs tracking-wider uppercase transition-colors">
+          Keep Exploring
         </button>
       </div>
     </motion.div>
@@ -699,64 +681,53 @@ export const SwipeDeck: React.FC<SwipeDeckProps> = ({
           )}
         </div>
 
-        {/* Action Dock - Premium Glassmorphic Pill */}
+        {/* Action Dock - Clean Professional Pill */}
         {viewMode === 'stack' && !isLoading && (
           <div className="absolute bottom-8 left-0 w-full z-[80] flex justify-center pointer-events-none px-4 shrink-0 transition-all duration-300" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-            <div className="flex items-center gap-3 sm:gap-5 px-5 py-3.5 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-full shadow-[0_20px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.1)] relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shimmer_2s_infinite] pointer-events-none"></div>
-              <ActionButton
-                icon={<RotateCcw size={20} strokeWidth={2.5} />}
-                color={swipeHistory.length > 0 ? "text-yellow-400" : "text-white/20"}
-                bg="bg-black/40"
+            <div className="flex items-center gap-2 sm:gap-4 px-4 py-2 bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-full shadow-lg relative overflow-hidden group pointer-events-auto">
+              {/* Rewind */}
+              <button
                 onClick={handleRewind}
                 disabled={swipeHistory.length === 0}
-                className="pointer-events-auto border-white/5 hover:bg-white/10"
-              />
-              <ActionButton
-                icon={<X size={32} strokeWidth={3} />}
-                color="text-[#ff4b4b]"
-                bg="bg-black/60 border-[#ff4b4b]/20 shadow-[0_0_20px_rgba(255,75,75,0.15)] hover:shadow-[0_0_30px_rgba(255,75,75,0.3)] hover:bg-[#ff4b4b]/10 hover:border-[#ff4b4b]/50"
-                size="large"
-                onClick={() => {
-                  if (activeCard) {
-                    triggerSwipe('left');
-                  }
-                }}
+                className={`p-3 rounded-full transition-colors flex items-center justify-center disabled:opacity-30 ${swipeHistory.length > 0 ? "text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-500/10" : "text-gray-400"}`}
+              >
+                <RotateCcw size={20} strokeWidth={2.5} />
+              </button>
+
+              {/* Reject */}
+              <button
+                onClick={() => { if (activeCard) triggerSwipe('left'); }}
                 disabled={stack.length === 0}
-                className="pointer-events-auto"
-              />
-              <ActionButton
-                icon={<Star size={24} fill="currentColor" />}
-                color={isPremium ? "text-[#00e5ff]" : "text-white/40"}
-                bg="bg-black/60 border-[#00e5ff]/30 shadow-[0_0_20px_rgba(0,229,255,0.2)] hover:shadow-[0_0_40px_rgba(0,229,255,0.4)] hover:bg-[#00e5ff]/10 hover:border-[#00e5ff]/60"
-                onClick={() => {
-                  if (activeCard) {
-                    handleSuperLikeAction();
-                  }
-                }}
+                className="w-14 h-14 rounded-full border-2 border-red-100 dark:border-red-900/30 text-red-500 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-50 mx-1"
+              >
+                <X size={28} strokeWidth={3} />
+              </button>
+
+              {/* Super Like */}
+              <button
+                onClick={() => { if (activeCard) handleSuperLikeAction(); }}
                 disabled={stack.length === 0}
-                className="scale-[1.15] hover:scale-[1.3] transition-all duration-300 pointer-events-auto mx-2"
-              />
-              <ActionButton
-                icon={<Heart size={32} fill="currentColor" />}
-                color="text-[#00ff87]"
-                bg="bg-black/60 border-[#00ff87]/20 shadow-[0_0_20px_rgba(0,255,135,0.15)] hover:shadow-[0_0_30px_rgba(0,255,135,0.3)] hover:bg-[#00ff87]/10 hover:border-[#00ff87]/50"
-                size="large"
-                onClick={() => {
-                  if (activeCard) {
-                    triggerSwipe('right');
-                  }
-                }}
+                className={`p-3 rounded-full transition-colors flex items-center justify-center disabled:opacity-50 ${isPremium ? "text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10" : "text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"}`}
+              >
+                <Star size={24} fill="currentColor" />
+              </button>
+
+              {/* Like */}
+              <button
+                onClick={() => { if (activeCard) triggerSwipe('right'); }}
                 disabled={stack.length === 0}
-                className="pointer-events-auto"
-              />
-              <ActionButton
-                icon={<Zap size={20} fill="currentColor" />}
-                color={isBoostActive ? "text-white" : "text-[#b026ff]"}
-                bg={isBoostActive ? "bg-gradient-to-br from-[#b026ff] to-[#ff00cc] border-transparent shadow-[0_0_20px_rgba(176,38,255,0.5)]" : "bg-black/40 border-white/5 hover:bg-white/10"}
+                className="w-14 h-14 rounded-full border-2 border-emerald-100 dark:border-emerald-900/30 text-emerald-500 flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-colors disabled:opacity-50 mx-1"
+              >
+                <Heart size={28} fill="currentColor" />
+              </button>
+
+              {/* Boost */}
+              <button
                 onClick={handleBoost}
-                className="pointer-events-auto"
-              />
+                className={`p-3 rounded-full transition-colors flex items-center justify-center ${isBoostActive ? "text-purple-500 bg-purple-50 dark:bg-purple-500/10" : "text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10"}`}
+              >
+                <Zap size={20} fill="currentColor" />
+              </button>
             </div>
           </div>
         )}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, UserRole } from '../types';
 import { GlassCard } from './GlassCard';
-import { Heart, Search, Zap, TrendingUp, LayoutGrid, Crown, ShieldCheck, ChevronRight, Briefcase, Settings, Clock } from 'lucide-react';
+import { Heart, Search, Zap, TrendingUp, LayoutGrid, Crown, ShieldCheck, ChevronRight, Briefcase, Settings, Clock, Gift, Copy, Check, Inbox } from 'lucide-react';
 import { api } from '../services/firebaseService';
 import confetti from 'canvas-confetti';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -115,28 +115,50 @@ export const Dashboard: React.FC<DashboardProps> = ({
                </div>
             </div>
 
-            {/* Action Card: Start Swiping */}
-            <div
-               onClick={() => onNavigate('deck')}
-               className="relative h-48 rounded-[2.5rem] overflow-hidden group cursor-pointer shadow-2xl shadow-pink-500/20"
-            >
-               <div className="absolute inset-0 bg-gradient-to-tr from-pink-500 to-orange-400 group-hover:scale-105 transition-transform duration-700"></div>
-               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+            {/* Action Card: Matching or Requests */}
+            {user.role === UserRole.INFLUENCER ? (
+               <div
+                  onClick={() => onNavigate('requests')}
+                  className="relative h-48 rounded-[2.5rem] overflow-hidden group cursor-pointer shadow-2xl shadow-green-500/20"
+               >
+                  <div className="absolute inset-0 bg-gradient-to-tr from-emerald-500 to-green-400 group-hover:scale-105 transition-transform duration-700"></div>
+                  <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
 
-               {/* Abstract Decorative Shapes */}
-               <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full -mr-10 -mt-10 blur-3xl group-hover:bg-white/30 transition-colors"></div>
-               <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full -ml-12 -mb-12 blur-2xl"></div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full -mr-10 -mt-10 blur-3xl group-hover:bg-white/30 transition-colors"></div>
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full -ml-12 -mb-12 blur-2xl"></div>
 
-               <div className="relative h-full p-8 flex flex-col justify-end">
-                  <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform duration-500">
-                     <Zap size={24} fill="currentColor" />
+                  <div className="relative h-full p-8 flex flex-col justify-end">
+                     <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform duration-500">
+                        <Inbox size={24} fill="currentColor" />
+                     </div>
+                     <h2 className="text-3xl font-extrabold text-white mb-2">View Requests</h2>
+                     <p className="text-white/70 font-medium flex items-center gap-2">
+                        Brands wanting to collab <ChevronRight size={16} />
+                     </p>
                   </div>
-                  <h2 className="text-3xl font-extrabold text-white mb-2">Start Matching</h2>
-                  <p className="text-white/70 font-medium flex items-center gap-2">
-                     Find your next collab <ChevronRight size={16} />
-                  </p>
                </div>
-            </div>
+            ) : (
+               <div
+                  onClick={() => onNavigate('deck')}
+                  className="relative h-48 rounded-[2.5rem] overflow-hidden group cursor-pointer shadow-2xl shadow-pink-500/20"
+               >
+                  <div className="absolute inset-0 bg-gradient-to-tr from-pink-500 to-orange-400 group-hover:scale-105 transition-transform duration-700"></div>
+                  <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full -mr-10 -mt-10 blur-3xl group-hover:bg-white/30 transition-colors"></div>
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full -ml-12 -mb-12 blur-2xl"></div>
+
+                  <div className="relative h-full p-8 flex flex-col justify-end">
+                     <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform duration-500">
+                        <Zap size={24} fill="currentColor" />
+                     </div>
+                     <h2 className="text-3xl font-extrabold text-white mb-2">Start Matching</h2>
+                     <p className="text-white/70 font-medium flex items-center gap-2">
+                        Find your next collab <ChevronRight size={16} />
+                     </p>
+                  </div>
+               </div>
+            )}
 
             {/* Bento Grid Stats */}
             <div>
@@ -258,6 +280,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      </div>
                   </div>
                )}
+
             </div>
 
          </div>

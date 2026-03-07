@@ -9,7 +9,9 @@ import {
   signOut,
   RecaptchaVerifier, // Keep RecaptchaVerifier for web fallback if needed, but not used in new sendOTP
   signInWithPhoneNumber, // Keep signInWithPhoneNumber for web fallback if needed, but not used in new sendOTP
-  ConfirmationResult // Keep ConfirmationResult for web fallback if needed, but not used in new verifyOTP
+  ConfirmationResult, // Keep ConfirmationResult for web fallback if needed, but not used in new verifyOTP
+  FacebookAuthProvider,
+  signInWithPopup
 } from "firebase/auth";
 import {
   ref,
@@ -17,7 +19,7 @@ import {
   getDownloadURL
 } from "firebase/storage";
 import { auth, db, storage, isConfigured } from "./firebaseConfig";
-import { User, UserRole, Match, Message, AdminStats, UserStatus, VerificationStatus, Contract, Notification, Proposal, LiveBrief, UserSettings } from '../types';
+import { User, UserRole, Match, Message, AdminStats, UserStatus, VerificationStatus, Contract, Notification, Proposal, LiveBrief, UserSettings, Review } from '../types';
 import { MOCK_BUSINESS_USERS, MOCK_INFLUENCER_USERS, PLACEHOLDER_AVATAR, APP_LOGO } from '../constants';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { Capacitor } from '@capacitor/core';
@@ -31,6 +33,8 @@ declare global {
 
 class FirebaseService {
   private currentUser: User | null = null;
+
+  // --- UTILITY METHODS --- //
 
   // --- HELPER ---
   private checkConfig() {
@@ -123,7 +127,125 @@ class FirebaseService {
         throw firestoreError;
       }
     } catch (error: any) {
+      if (email && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
+        if (email === 'hello@pixelarcade.co' || email === 'alex@fitness.fit' || email === 'jamie.travels@social.com') {
+          console.log("Demo user not found in Auth. Auto-creating...");
+          try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password || 'demo123');
+            const uid = userCredential.user.uid;
+            let demoUser: any;
+            if (email === 'hello@pixelarcade.co') demoUser = { ...MOCK_BUSINESS_USERS[0], id: uid };
+            else if (email === 'jamie.travels@social.com') demoUser = { ...MOCK_INFLUENCER_USERS[0], id: uid };
+            else if (email === 'alex@fitness.fit') demoUser = { ...MOCK_INFLUENCER_USERS[3], id: uid };
+
+            await setDoc(doc(db, "users", uid), demoUser);
+            this.currentUser = demoUser;
+            localStorage.setItem('ping_session_user', JSON.stringify(this.currentUser));
+            return demoUser;
+          } catch (signupError) {
+            console.error("Failed to auto-create demo user:", signupError);
+            throw signupError;
+          }
+        }
+      }
       console.error("Login Error:", error);
+      throw error;
+    }
+  }
+
+  // --- META API INTEGRATION ---
+  async loginWithMeta(role: UserRole): Promise<User> {
+    this.checkConfig();
+    try {
+      const provider = new FacebookAuthProvider();
+      // Request access to Instagram/Pages data if needed later, basic public_profile is default
+      // provider.addScope('instagram_basic');
+      // provider.addScope('pages_show_list');
+
+      const result = await signInWithPopup(auth, provider);
+      const credential = FacebookAuthProvider.credentialFromResult(result);
+      const accessToken = credential?.accessToken;
+      const uid = result.user.uid;
+
+      let metaData = {
+        name: result.user.displayName || "Meta User",
+        avatar: result.user.photoURL || PLACEHOLDER_AVATAR,
+        verified: false,
+        followers: '0'
+      };
+
+      // If we got the OAuth token, fetch rich data directly from Meta Graph API
+      if (accessToken) {
+        try {
+          // Fetch robust profile data. The Facebook API returns a verifiable user ID.
+          const response = await fetch(`https://graph.facebook.com/v19.0/me?fields=id,name,picture.type(large)&access_token=${accessToken}`);
+          const graphData = await response.json();
+
+          if (graphData && !graphData.error) {
+            metaData.name = graphData.name || metaData.name;
+            if (graphData.picture?.data?.url) {
+              metaData.avatar = graphData.picture.data.url;
+            }
+            // If they successfully auth via Meta API, we can consider them 'Verified' on our platform
+            metaData.verified = true;
+
+            // NOTE: To get Instagram followers, you need the 'instagram_basic' scope and deeper Graph API queries.
+            // For now, we simulate pulling robust stats upon successful Meta Auth.
+          }
+        } catch (apiError) {
+          console.error("Meta Graph API fetch failed, falling back to basic Auth profile:", apiError);
+        }
+      }
+
+      const userDocRef = doc(db, "users", uid);
+      const userDoc = await getDoc(userDocRef);
+
+      if (userDoc.exists()) {
+        const fetchedUser = userDoc.data() as User;
+
+        // Update their existing profile with the new verified Meta data
+        const updates: Partial<User> = {
+          verified: metaData.verified || fetchedUser.verified,
+          verificationStatus: metaData.verified ? VerificationStatus.VERIFIED : fetchedUser.verificationStatus
+        };
+        await updateDoc(userDocRef, updates);
+
+        this.currentUser = { ...fetchedUser, ...updates };
+        localStorage.setItem('ping_session_user', JSON.stringify(this.currentUser));
+        return this.currentUser;
+      } else {
+        // Create new account via Meta
+        const newUser: User = {
+          id: uid,
+          name: metaData.name,
+          email: result.user.email || `${uid}@facebook.com`,
+          role,
+          avatar: metaData.avatar,
+          bio: 'Verified via Meta Integration',
+          location: '',
+          tags: ['Meta Verified'],
+          stats: role === UserRole.BUSINESS ? { budget: '₹0' } : { followers: metaData.followers, engagement: '0%' },
+          verified: metaData.verified,
+          status: UserStatus.ACTIVE,
+          verificationStatus: metaData.verified ? VerificationStatus.VERIFIED : VerificationStatus.UNVERIFIED,
+          joinedAt: Date.now(),
+          reportCount: 0,
+          isPremium: false,
+          socials: {},
+          portfolio: []
+        };
+
+        if (metaData.verified) {
+          newUser.pingScore = 95; // Give them a high trust score for using official API
+        }
+
+        await setDoc(doc(db, "users", uid), newUser);
+        this.currentUser = newUser;
+        localStorage.setItem('ping_session_user', JSON.stringify(this.currentUser));
+        return newUser;
+      }
+    } catch (error: any) {
+      console.error("Meta Login Error:", error);
       throw error;
     }
   }
@@ -267,6 +389,8 @@ class FirebaseService {
     this.currentUser = null;
     localStorage.removeItem('ping_session_user');
   }
+
+
 
   // --- STORAGE ---
 
@@ -457,6 +581,103 @@ class FirebaseService {
       return { isMatch: true, match: newMatch, updatedCount };
     }
     return { isMatch: false, updatedCount };
+  }
+
+  // --- BRAND-DRIVEN INBOUND REQUESTS (OPTION 2) ---
+
+  async getInboundRequests(userId: string): Promise<{ userId: string; userProfile: User; timestamp: number }[]> {
+    this.checkConfig();
+    try {
+      const requestsRef = collection(db, "users", userId, "received_swipes");
+      // Fetch only right/up swipes that have not yet been matched or declined
+      const q = query(
+        requestsRef,
+        where("direction", "in", ["right", "up"]),
+        where("matched", "==", false),
+        where("declined", "==", false)
+      );
+
+      const snapshot = await getDocs(q);
+      const requests: { userId: string; userProfile: User; timestamp: number }[] = [];
+
+      for (const d of snapshot.docs) {
+        const reqData = d.data();
+        const brandId = reqData.fromUserId;
+
+        try {
+          const brandDoc = await getDoc(doc(db, "users", brandId));
+          if (brandDoc.exists()) {
+            requests.push({
+              userId: brandId,
+              userProfile: brandDoc.data() as User,
+              timestamp: reqData.timestamp || Date.now()
+            });
+          }
+        } catch (e) {
+          console.warn(`Could not load brand profile for request ${brandId}`);
+        }
+      }
+
+      // Sort newest requests first
+      return requests.sort((a, b) => b.timestamp - a.timestamp);
+    } catch (e) {
+      console.error("Failed to fetch inbound requests", e);
+      return [];
+    }
+  }
+
+  async acceptRequest(influencerId: string, brandId: string): Promise<Match | null> {
+    this.checkConfig();
+    try {
+      const brandDoc = await getDoc(doc(db, "users", brandId));
+      if (!brandDoc.exists()) throw new Error("Brand not found");
+      const brandProfile = brandDoc.data() as User;
+
+      const matchId = [influencerId, brandId].sort().join("_");
+      let matchReason = "A brand requested to collaborate with you.";
+
+      // Try generating AI match reason
+      try {
+        if (this.currentUser) {
+          matchReason = await geminiService.generateMatchReason(this.currentUser, brandProfile);
+        }
+      } catch (e) { }
+
+      const newMatch: Match = {
+        id: matchId,
+        users: [influencerId, brandId],
+        lastActive: Date.now(),
+        userProfile: brandProfile,
+        lastMessage: '',
+        lastSenderId: '',
+        aiMatchReason: matchReason
+      };
+
+      // Store in matches collection
+      await setDoc(doc(db, "matches", matchId), newMatch);
+
+      // Mutate the local received sequence so it vanishes from the Inbox
+      await setDoc(doc(db, "users", influencerId, "received_swipes", brandId), { matched: true }, { merge: true });
+      await setDoc(doc(db, "users", brandId, "received_swipes", influencerId), { matched: true }, { merge: true });
+
+      // Build out notifications
+      await this.createNotification(influencerId, 'match', "Collaboration Accepted!", `You accepted the request from ${brandProfile.name}.`);
+      await this.createNotification(brandId, 'match', "Request Accepted!", `${this.currentUser?.name || "An influencer"} accepted your request to collaborate. Let's make magic happen!`);
+
+      return newMatch;
+    } catch (e) {
+      console.error("Failed to accept request", e);
+      return null;
+    }
+  }
+
+  async declineRequest(influencerId: string, brandId: string): Promise<void> {
+    this.checkConfig();
+    try {
+      await setDoc(doc(db, "users", influencerId, "received_swipes", brandId), { declined: true }, { merge: true });
+    } catch (e) {
+      console.error("Failed to decline request", e);
+    }
   }
 
   // --- MATCHES & MESSAGING ---
@@ -1311,6 +1532,67 @@ class FirebaseService {
     briefs.forEach(b => batch.set(doc(db, "live_briefs", b.id), b));
 
     await batch.commit();
+  }
+
+  // --- PHASE 4: REPUTATION & REVIEWS ---
+
+  async submitReview(targetId: string, contractId: string, rating: number, comment: string): Promise<void> {
+    if (!this.currentUser || !isConfigured || !db) return;
+
+    // 1. Create the Review document
+    const reviewData: Omit<Review, 'id'> = {
+      contractId,
+      authorId: this.currentUser.id,
+      targetId,
+      rating,
+      comment,
+      timestamp: Date.now()
+    };
+    await addDoc(collection(db, "reviews"), reviewData);
+
+    // 2. Safely Update the User's Average Rating
+    const targetRef = doc(db, "users", targetId);
+    const targetSnap = await getDoc(targetRef);
+
+    if (targetSnap.exists()) {
+      const userData = targetSnap.data() as User;
+      const currentCount = userData.reviewCount || 0;
+      const currentRating = userData.rating || 0;
+
+      // Calculate new running average
+      const newCount = currentCount + 1;
+      const newRating = ((currentRating * currentCount) + rating) / newCount;
+
+      await updateDoc(targetRef, {
+        rating: Number(newRating.toFixed(1)), // Round to 1 decimal place
+        reviewCount: newCount
+      });
+    }
+
+    // 3. Mark the Contract as Reviewed by this specific user
+    // We update the contract document to prevent duplicate reviews for the same role
+    const contractRef = doc(db, "contracts", contractId);
+    const roleKey = this.currentUser.role === UserRole.BUSINESS ? 'brandReviewed' : 'influencerReviewed';
+    await updateDoc(contractRef, {
+      [roleKey]: true
+    });
+  }
+
+  async getUserReviews(userId: string): Promise<Review[]> {
+    if (!isConfigured || !db) return [];
+
+    try {
+      const q = query(
+        collection(db, "reviews"),
+        where("targetId", "==", userId),
+        orderBy("timestamp", "desc")
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+    } catch (e) {
+      console.error("Error fetching reviews:", e);
+      return [];
+    }
   }
 }
 

@@ -4,15 +4,15 @@ import {
    MapPin, CheckCircle2, Briefcase, Building2, GraduationCap,
    PlayCircle, PauseCircle, Mic, StopCircle, Instagram, Twitter,
    Youtube, Linkedin, Globe, IndianRupee, Users as UsersIcon, Zap,
-   LayoutGrid, Sparkles, Lock, Volume2, VolumeX, X, Facebook, ShieldCheck
+   Sparkles, Lock, Volume2, VolumeX, X, Facebook, ShieldCheck, Star, Clock
 } from 'lucide-react';
 
 const StatBadge: React.FC<{ icon: React.ReactNode; label: string; value: string }> = ({ icon, label, value }) => (
-   <div className="bg-black/40 backdrop-blur-xl rounded-2xl p-3 border border-white/10 flex flex-col justify-center shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all hover:bg-black/50 hover:border-white/20">
-      <div className="flex items-center gap-1.5 text-white/60 text-[10px] uppercase font-bold tracking-widest mb-1">
+   <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 border border-gray-100 dark:border-white/10 flex flex-col justify-center transition-all hover:bg-gray-100 dark:hover:bg-white/10">
+      <div className="flex items-center gap-1.5 text-gray-500 dark:text-white/60 text-[10px] uppercase font-bold tracking-widest mb-1">
          {icon} {label}
       </div>
-      <div className="text-white font-bold text-base tracking-tight">{value}</div>
+      <div className="text-gray-900 dark:text-white font-bold text-base tracking-tight">{value}</div>
    </div>
 );
 
@@ -30,11 +30,9 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ user, role, isPremium,
    const [isMuted, setIsMuted] = useState(false);
    const videoRef = useRef<HTMLVideoElement>(null);
 
-   // Audio State
    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
    const audioRef = useRef<HTMLAudioElement>(null);
 
-   // Autoplay video when expanded
    useEffect(() => {
       if (expanded && (user.mediaKitVideoUrl || user.introVideoUrl)) {
          setIsPlaying(true);
@@ -43,7 +41,6 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ user, role, isPremium,
 
    const toggleVideo = (e: React.MouseEvent) => {
       e.stopPropagation();
-      // Stop audio if playing
       if (isAudioPlaying) {
          audioRef.current?.pause();
          setIsAudioPlaying(false);
@@ -63,7 +60,6 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ user, role, isPremium,
       if (isAudioPlaying) {
          audioRef.current.pause();
       } else {
-         // Stop video if playing
          if (isPlaying) setIsPlaying(false);
          audioRef.current.play();
       }
@@ -71,14 +67,15 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ user, role, isPremium,
    };
 
    return (
-      <div className={`w-full h-full overflow-hidden relative bg-[#0a0a0a] rounded-3xl !p-0 shadow-2xl transition-all duration-500 ${expanded ? 'border border-white/10 shadow-[0_0_50px_rgba(236,72,153,0.15)]' : ''}`}>
-         {/* Background Media */}
-         <div className={`absolute inset-0 z-0 ${expanded ? '' : 'pointer-events-none'}`}>
+      <div className={`flex flex-col w-full h-full overflow-hidden bg-white dark:bg-[#121212] rounded-[2rem] shadow-xl border border-gray-200 dark:border-white/10 transition-all duration-300 ${expanded ? 'ring-4 ring-gray-100 dark:ring-white/5' : ''}`}>
+
+         {/* Top Half: Media */}
+         <div className={`relative w-full shrink-0 ${expanded ? 'h-[40%]' : 'h-[50%]'} bg-gray-100 dark:bg-[#0a0a0a]`}>
             {(isPlaying || (user.boostExpiresAt && user.boostExpiresAt > Date.now())) && (user.mediaKitVideoUrl || user.introVideoUrl) ? (
                <video
                   ref={videoRef}
                   src={user.mediaKitVideoUrl || user.introVideoUrl}
-                  className="w-full h-full object-cover scale-105 transition-transform duration-1000"
+                  className="w-full h-full object-cover"
                   autoPlay
                   loop
                   muted={isMuted}
@@ -87,7 +84,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ user, role, isPremium,
             ) : (
                <img
                   src={user.avatar}
-                  className="w-full h-full object-cover pointer-events-none select-none scale-105 transition-transform duration-1000"
+                  className="w-full h-full object-cover pointer-events-none select-none"
                   draggable={false}
                   alt={user.name}
                />
@@ -95,273 +92,239 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ user, role, isPremium,
             {user.voiceIntroUrl && (
                <audio ref={audioRef} src={user.voiceIntroUrl} onEnded={() => setIsAudioPlaying(false)} />
             )}
-         </div>
 
-         {/* Advanced Overlays */}
-         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-transparent pointer-events-none z-10 opacity-60" />
-         {/* Deeper gradient at bottom for text readability */}
-         <div className={`absolute bottom-0 left-0 right-0 ${expanded ? 'h-[80%]' : 'h-3/4'} bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-10 transition-all duration-500`} />
+            {/* Gradient Overlay for Top Icons */}
+            <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/50 to-transparent pointer-events-none z-10" />
 
-         {/* AI Analysis Badge - Premium Logic */}
-         {user.aiMatchScore && !isPlaying && (
-            <div className={`absolute top-5 left-5 right-5 z-20 ${expanded ? '' : 'pointer-events-none'}`}>
-               {isPremium ? (
-                  <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-2xl p-4 flex items-start gap-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] relative overflow-hidden group">
-                     <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 to-orange-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                     <div className="bg-gradient-to-tr from-pink-500 to-orange-400 text-white font-bold text-sm rounded-xl p-2.5 shrink-0 shadow-inner relative z-10 flex flex-col items-center justify-center min-w-[3rem]">
-                        <span className="leading-none">{user.aiMatchScore}</span>
-                        <span className="text-[8px] uppercase tracking-widest opacity-80 mt-0.5">Match</span>
+            {/* Ping Score & Rating Badge - Top Right */}
+            {!isPlaying && (
+               <div className={`absolute top-4 right-4 z-20 flex flex-col gap-2 ${expanded ? 'pointer-events-none' : ''}`}>
+                  {!user.aiMatchScore && (
+                     <div className="bg-white/90 dark:bg-black/60 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-full px-3 py-1.5 flex items-center gap-2 shadow-sm w-fit ml-auto">
+                        <ShieldCheck size={14} className="text-blue-500" />
+                        <span className="text-xs font-bold text-gray-900 dark:text-white tracking-wider">
+                           {user.pingScore || 75}
+                        </span>
                      </div>
-                     <div className="relative z-10">
-                        <div className="flex items-center gap-1.5 text-[10px] text-pink-300 font-bold uppercase tracking-widest mb-1">
-                           <Sparkles size={12} className="animate-pulse" /> AI Insight
-                        </div>
-                        <p className="text-xs text-white/90 leading-relaxed font-medium">{user.aiMatchReason}</p>
+                  )}
+                  {user.rating && (
+                     <div className="bg-white/90 dark:bg-black/60 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-full px-3 py-1.5 flex items-center gap-1.5 shadow-sm w-fit ml-auto">
+                        <Star size={12} className="text-yellow-500 fill-yellow-500" />
+                        <span className="text-xs font-bold text-gray-900 dark:text-white">
+                           {user.rating} <span className="text-gray-500 dark:text-white/50 font-normal ml-0.5">({user.reviewCount})</span>
+                        </span>
                      </div>
-                  </div>
-               ) : (
-                  <div
-                     onClick={(e) => { e.stopPropagation(); onUpgrade && onUpgrade(); }}
-                     className="bg-black/70 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] cursor-pointer group hover:bg-black/90 transition-all overflow-hidden relative"
-                  >
-                     <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                     <div className="flex items-center gap-4 relative z-10">
-                        <div className="bg-white/5 text-white/50 border border-white/10 font-bold text-sm rounded-xl p-2.5 shrink-0 shadow-inner flex flex-col items-center justify-center min-w-[3rem]">
-                           <Lock size={14} className="mb-0.5" />
+                  )}
+               </div>
+            )}
+
+            {/* Video Controls */}
+            {isPlaying && (
+               <div className="absolute top-4 right-4 z-40 flex flex-col gap-2">
+                  <button onClick={toggleVideo} className="w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/70 transition-all">
+                     <X size={18} />
+                  </button>
+                  <button onClick={toggleMute} className="w-10 h-10 bg-black/50 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/70 transition-all">
+                     {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                  </button>
+               </div>
+            )}
+
+            {/* AI Analysis Badge - Positioned cleanly over media */}
+            {user.aiMatchScore && !isPlaying && (
+               <div className={`absolute bottom-4 left-4 right-4 z-20 ${expanded ? '' : 'pointer-events-none'}`}>
+                  {isPremium ? (
+                     <div className="bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-xl p-3 flex items-start gap-3 shadow-lg">
+                        <div className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold text-xs rounded-lg p-2 shrink-0 flex flex-col items-center justify-center border border-blue-100 dark:border-blue-500/20">
+                           <span className="leading-none text-base">{user.aiMatchScore}</span>
+                           <span className="text-[9px] uppercase tracking-wider mt-0.5">Match</span>
                         </div>
                         <div>
-                           <div className="flex items-center gap-1.5 text-[10px] text-pink-400 font-bold uppercase tracking-widest mb-1">
-                              Match Insight Locked
+                           <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-white/50 font-bold uppercase tracking-widest mb-1">
+                              <Sparkles size={12} className="text-blue-500" /> AI Insight
                            </div>
-                           <p className="text-xs text-white/60 leading-relaxed font-medium">Unlock advanced Ping AI analysis</p>
+                           <p className="text-xs text-gray-800 dark:text-white/90 font-medium leading-relaxed">{user.aiMatchReason}</p>
                         </div>
                      </div>
-                     <button className="bg-gradient-to-r from-pink-500 to-orange-400 text-white text-[10px] font-bold px-4 py-2 rounded-full shadow-[0_0_20px_rgba(236,72,153,0.3)] group-hover:shadow-[0_0_30px_rgba(236,72,153,0.5)] group-hover:scale-105 transition-all relative z-10 whitespace-nowrap">
-                        PING GOLD
-                     </button>
-                  </div>
-               )}
-            </div>
-         )}
-
-         {/* Ping Score Badge - Discovery trust indicator */}
-         {!isPlaying && (
-            <div className={`absolute top-5 right-5 z-20 ${expanded ? 'pointer-events-none' : ''}`}>
-               {!user.aiMatchScore && ( // Only show if AI Match Score isn't taking up the top slot
-                  <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl px-3 py-1.5 flex items-center gap-2 shadow-lg">
-                     <ShieldCheck size={14} className="text-indigo-400" />
-                     <span className="text-xs font-bold text-white/90 tracking-wider blur-0">
-                        {user.pingScore || 75}
-                     </span>
-                  </div>
-               )}
-            </div>
-         )}
-
-         {/* Video Controls (Visible when playing) */}
-         {isPlaying && (
-            <div className="absolute top-5 right-5 z-40 flex flex-col gap-3">
-               <button
-                  onClick={toggleVideo}
-                  className="w-12 h-12 bg-black/50 backdrop-blur-xl rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/70 hover:scale-105 transition-all shadow-lg"
-               >
-                  <X size={20} />
-               </button>
-               <button
-                  onClick={toggleMute}
-                  className="w-12 h-12 bg-black/50 backdrop-blur-xl rounded-full flex items-center justify-center text-white border border-white/20 hover:bg-black/70 hover:scale-105 transition-all shadow-lg"
-               >
-                  {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-               </button>
-            </div>
-         )}
-
-         {/* Content Area */}
-         <div className={`absolute bottom-0 left-0 w-full px-6 py-8 text-left z-20 ${expanded ? 'h-full overflow-y-auto bg-black/40 backdrop-blur-2xl pt-28 pointer-events-auto no-scrollbar' : 'pointer-events-none'}`}>
-
-            {/* Name & Verification */}
-            <div className="flex items-center gap-2 mb-3">
-               <h2 className="text-4xl font-extrabold text-white drop-shadow-xl tracking-tight">{user.name}</h2>
-               {user.verified && <CheckCircle2 className="text-blue-400 drop-shadow-[0_0_10px_rgba(96,165,250,0.5)]" size={28} />}
-            </div>
-
-            {/* Tags/Pills Row */}
-            <div className="flex flex-wrap items-center gap-2 mb-5">
-               <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 text-xs font-bold text-white flex items-center gap-2 shadow-sm">
-                  <MapPin size={12} className="text-pink-400" /> {user.location || 'Unknown'}
+                  ) : (
+                     <div
+                        onClick={(e) => { e.stopPropagation(); onUpgrade && onUpgrade(); }}
+                        className="bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-xl p-3 flex items-center justify-between gap-3 shadow-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-[#222] transition-colors"
+                     >
+                        <div className="flex items-center gap-3">
+                           <div className="bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-white/40 border border-gray-200 dark:border-white/10 rounded-lg p-2 min-w-[3rem] flex items-center justify-center">
+                              <Lock size={16} />
+                           </div>
+                           <div>
+                              <div className="text-[10px] text-gray-500 dark:text-white/50 font-bold uppercase tracking-widest mb-0.5">
+                                 Insight Locked
+                              </div>
+                              <p className="text-xs text-gray-800 dark:text-white/90 font-medium">Unlock match analysis</p>
+                           </div>
+                        </div>
+                        <span className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-full transition-colors whitespace-nowrap">
+                           Upgrade
+                        </span>
+                     </div>
+                  )}
                </div>
+            )}
+         </div>
 
-               {user.jobTitle && (
-                  <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 text-xs font-bold text-white flex items-center gap-2 shadow-sm">
-                     <Briefcase size={12} className="text-blue-400" /> {user.jobTitle}
+         {/* Bottom Half: Content Data */}
+         <div className="flex-1 overflow-y-auto no-scrollbar p-6 bg-white dark:bg-[#121212] z-20">
+            {/* Header: Name & Verification */}
+            <div className="flex justify-between items-start mb-4">
+               <div>
+                  <div className="flex items-center gap-2 mb-1">
+                     <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight leading-none">{user.name}</h2>
+                     {user.verified && <CheckCircle2 className="text-blue-500" size={24} />}
                   </div>
-               )}
-               {user.company && (
-                  <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 text-xs font-bold text-white flex items-center gap-2 shadow-sm">
-                     <Building2 size={12} className="text-purple-400" /> {user.company}
+                  {/* Tags Pill Row */}
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                     <span className="text-xs font-bold text-gray-600 dark:text-white/60 flex items-center gap-1">
+                        <MapPin size={12} className="text-gray-400" /> {user.location || 'Unknown'}
+                     </span>
+                     {user.jobTitle && (
+                        <>
+                           <span className="text-gray-300 dark:text-white/20">•</span>
+                           <span className="text-xs font-medium text-gray-600 dark:text-white/60">{user.jobTitle}</span>
+                        </>
+                     )}
                   </div>
-               )}
-               {user.school && (
-                  <div className="bg-white/10 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 text-xs font-bold text-white flex items-center gap-2 shadow-sm">
-                     <GraduationCap size={12} className="text-yellow-400" /> {user.school}
-                  </div>
-               )}
+               </div>
             </div>
+
+            {/* Brief Bio */}
+            <p className={`text-gray-600 dark:text-white/80 text-sm leading-relaxed mb-6 ${expanded ? '' : 'line-clamp-2'}`}>
+               {user.bio}
+            </p>
 
             {/* Media & Socials Row */}
             <div className="flex items-center gap-3 mb-6 overflow-x-auto no-scrollbar pb-2 pointer-events-auto">
-               {/* Video Button */}
                {user.introVideoUrl && (
                   <button
                      onClick={toggleVideo}
-                     className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all border shadow-lg ${isPlaying ? 'bg-white text-black border-white shadow-[0_0_20px_rgba(255,255,255,0.3)]' : 'bg-white/10 backdrop-blur-xl text-white border-white/20 hover:bg-white/20 hover:scale-105'}`}
+                     className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-colors border ${isPlaying ? 'bg-black dark:bg-white text-white dark:text-black border-transparent' : 'bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-white border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10'}`}
                   >
-                     {isPlaying ? <PauseCircle size={16} /> : <PlayCircle size={16} className="text-pink-400" />}
+                     {isPlaying ? <PauseCircle size={16} /> : <PlayCircle size={16} className="text-blue-500" />}
                      {isPlaying ? 'Playing' : 'Intro Video'}
                   </button>
                )}
 
-               {/* Audio Button */}
                {user.voiceIntroUrl && (
                   <button
                      onClick={toggleAudio}
-                     className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all border shadow-lg ${isAudioPlaying ? 'bg-purple-500 text-white border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.4)]' : 'bg-white/10 backdrop-blur-xl text-white border-white/20 hover:bg-white/20 hover:scale-105'}`}
+                     className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-colors border ${isAudioPlaying ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/30' : 'bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-white border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10'}`}
                   >
-                     {isAudioPlaying ? <StopCircle size={16} /> : <Mic size={16} className="text-purple-400" />}
+                     {isAudioPlaying ? <StopCircle size={16} /> : <Mic size={16} className="text-purple-500" />}
                      {isAudioPlaying ? 'Listening' : 'Voice Intro'}
                   </button>
                )}
 
-               {/* Divider */}
                {(user.introVideoUrl || user.voiceIntroUrl) && user.socials && Object.values(user.socials).some(v => v) && (
-                  <div className="w-px h-6 bg-white/20 mx-1 shrink-0"></div>
+                  <div className="w-px h-6 bg-gray-200 dark:bg-white/10 mx-1 shrink-0"></div>
                )}
 
-               {/* Social Icons */}
                {user.socials && (
                   <div className="flex items-center gap-2">
                      {user.socials.instagram && (
-                        <a href={`https://instagram.com/${user.socials.instagram.replace('@', '')}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2.5 bg-white/10 backdrop-blur-xl border border-white/10 rounded-full hover:bg-gradient-to-tr hover:from-yellow-400 hover:via-pink-500 hover:to-purple-500 hover:border-transparent text-white transition-all shadow-sm hover:scale-110">
-                           <Instagram size={14} />
+                        <a href={`https://instagram.com/${user.socials.instagram.replace('@', '')}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2 text-gray-400 hover:text-pink-500 transition-colors">
+                           <Instagram size={18} />
                         </a>
                      )}
                      {user.socials.twitter && (
-                        <a href={`https://twitter.com/${user.socials.twitter.replace('@', '')}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2.5 bg-white/10 backdrop-blur-xl border border-white/10 rounded-full hover:bg-blue-400 hover:border-blue-400 text-white transition-all shadow-sm hover:scale-110">
-                           <Twitter size={14} />
+                        <a href={`https://twitter.com/${user.socials.twitter.replace('@', '')}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2 text-gray-400 hover:text-blue-400 transition-colors">
+                           <Twitter size={18} />
                         </a>
                      )}
                      {user.socials.youtube && (
-                        <a href={user.socials.youtube} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2.5 bg-white/10 backdrop-blur-xl border border-white/10 rounded-full hover:bg-red-600 hover:border-red-600 text-white transition-all shadow-sm hover:scale-110">
-                           <Youtube size={14} />
+                        <a href={user.socials.youtube} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
+                           <Youtube size={18} />
                         </a>
                      )}
                      {user.socials.linkedin && (
-                        <a href={user.socials.linkedin} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2.5 bg-white/10 backdrop-blur-xl border border-white/10 rounded-full hover:bg-blue-700 hover:border-blue-700 text-white transition-all shadow-sm hover:scale-110">
-                           <Linkedin size={14} />
-                        </a>
-                     )}
-                     {user.socials.facebook && (
-                        <a href={user.socials.facebook} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2.5 bg-white/10 backdrop-blur-xl border border-white/10 rounded-full hover:bg-blue-600 hover:border-blue-600 text-white transition-all shadow-sm hover:scale-110">
-                           <Facebook size={14} />
+                        <a href={user.socials.linkedin} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2 text-gray-400 hover:text-blue-700 transition-colors">
+                           <Linkedin size={18} />
                         </a>
                      )}
                      {user.website && (
-                        <a href={user.website.startsWith('http') ? user.website : `https://${user.website}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2.5 bg-white/10 backdrop-blur-xl border border-white/10 rounded-full hover:bg-emerald-500 hover:border-emerald-500 text-white transition-all shadow-sm hover:scale-110">
-                           <Globe size={14} />
+                        <a href={user.website.startsWith('http') ? user.website : `https://${user.website}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="p-2 text-gray-400 hover:text-emerald-500 transition-colors">
+                           <Globe size={18} />
                         </a>
                      )}
                   </div>
                )}
             </div>
 
+            {/* Core Stats */}
             <div className="grid grid-cols-2 gap-3 mb-6">
                {isInfluencerLookingAtBrand ? (
                   <>
-                     <StatBadge icon={<IndianRupee size={14} className="text-green-400" />} label="Budget" value={user.stats?.budget?.replace(/\$/g, '₹') || 'N/A'} />
-                     <StatBadge icon={<Briefcase size={14} className="text-purple-400" />} label="Niche" value={user.tags[0]} />
+                     <StatBadge icon={<IndianRupee size={14} className="text-green-500" />} label="Budget" value={user.stats?.budget?.replace(/\$/g, '₹') || 'N/A'} />
+                     <StatBadge icon={<Briefcase size={14} className="text-purple-500" />} label="Niche" value={user.tags[0] || 'Unspecified'} />
                   </>
                ) : (
                   <>
-                     <StatBadge icon={<Instagram size={14} className="text-pink-400" />} label="Instagram" value={user.socialStats?.instagramFollowers || user.stats?.followers || '0'} />
-                     <StatBadge icon={<Zap size={14} className="text-yellow-400" />} label="Engagement" value={user.socialStats?.avgEngagement || user.stats?.engagement || '0%'} />
+                     <StatBadge icon={<Instagram size={14} className="text-pink-500" />} label="Instagram" value={user.socialStats?.instagramFollowers || user.stats?.followers || '0'} />
+                     <StatBadge icon={<Zap size={14} className="text-blue-500" />} label="Engagement" value={user.socialStats?.avgEngagement || user.stats?.engagement || '0%'} />
                   </>
                )}
             </div>
 
-            {expanded && !isInfluencerLookingAtBrand && user.socialStats && (
-               <div className="grid grid-cols-2 gap-3 mb-6">
-                  <StatBadge icon={<Youtube size={14} className="text-red-500" />} label="YouTube" value={user.socialStats.youtubeSubscribers || '0'} />
-                  <StatBadge icon={<Zap size={14} className="text-blue-400" />} label="TikTok" value={user.socialStats.tiktokFollowers || '0'} />
-               </div>
-            )}
+            {/* Expanded Content Only */}
+            {expanded && (
+               <div className="space-y-6 animate-in fade-in duration-300">
 
-            <p className={`text-white/80 text-[15px] leading-relaxed font-medium mb-6 ${expanded ? '' : 'line-clamp-2'} drop-shadow-sm`}>
-               {user.bio}
-            </p>
-
-            {/* Media Kit Preview */}
-            {user.portfolio && user.portfolio.length > 0 && (
-               <div className={expanded ? "grid grid-cols-3 gap-3 pb-6" : "flex gap-3 overflow-x-auto pb-2 no-scrollbar mask-linear-fade"}>
-                  {user.portfolio.slice(0, expanded ? undefined : 3).map((img, i) => (
-                     <div key={i} className={`shrink-0 rounded-2xl overflow-hidden border border-white/10 shadow-lg ${expanded ? 'aspect-square w-full hover:scale-105 transition-transform' : 'w-20 h-20'}`}>
-                        <img src={img} className="w-full h-full object-cover" alt="Portfolio item" />
-                     </div>
-                  ))}
-                  {!expanded && user.portfolio.length > 3 && (
-                     <div className="w-20 h-20 shrink-0 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 flex items-center justify-center text-sm font-bold text-white shadow-lg">
-                        +{user.portfolio.length - 3}
+                  {/* Secondary Stats */}
+                  {!isInfluencerLookingAtBrand && user.socialStats && (
+                     <div className="grid grid-cols-2 gap-3">
+                        <StatBadge icon={<Youtube size={14} className="text-red-500" />} label="YouTube Subs" value={user.socialStats.youtubeSubscribers || '0'} />
+                        <StatBadge icon={<Globe size={14} className="text-emerald-500" />} label="TikTok" value={user.socialStats.tiktokFollowers || '0'} />
                      </div>
                   )}
-               </div>
-            )}
 
-            {/* Extra Details when Expanded */}
-            {expanded && (
-               <div className="mt-2 pt-6 border-t border-white/10 space-y-6">
-                  {/* Trust Metrics */}
-                  <div className="space-y-4">
-                     <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                        <ShieldCheck size={14} className="text-indigo-400" /> Trust & Performance
-                     </h4>
-                     <div className="grid grid-cols-3 gap-3">
-                        <StatBadge icon={<ShieldCheck size={14} className="text-indigo-400" />} label="Ping Score" value={String(user.pingScore || 75)} />
-                        {user.completionRate !== undefined && (
-                           <StatBadge icon={<CheckCircle2 size={14} className="text-green-400" />} label="Completion" value={`${user.completionRate}%`} />
-                        )}
-                        {user.responseTime && (
-                           <StatBadge icon={<Zap size={14} className="text-yellow-400" />} label="Response" value={user.responseTime} />
-                        )}
-                     </div>
-                  </div>
-
-                  {/* Business Details (If applicable) */}
-                  {(user.industry || user.companySize) && (
-                     <div className="space-y-4">
-                        <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                           <Building2 size={14} className="text-purple-400" /> Business Details
-                        </h4>
-                        <div className="grid grid-cols-2 gap-3">
-                           {user.industry && <StatBadge icon={<Briefcase size={14} className="text-purple-400" />} label="Industry" value={user.industry} />}
-                           {user.companySize && <StatBadge icon={<UsersIcon size={14} className="text-blue-400" />} label="Size" value={user.companySize} />}
+                  {/* Portfolio Gallery */}
+                  {user.portfolio && user.portfolio.length > 0 && (
+                     <div className="space-y-3">
+                        <h4 className="text-xs font-bold text-gray-500 dark:text-white/50 uppercase tracking-widest">Selected Work</h4>
+                        <div className="grid grid-cols-3 gap-3">
+                           {user.portfolio.map((img, i) => (
+                              <div key={i} className="aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/5 hover:opacity-90 transition-opacity">
+                                 <img src={img} className="w-full h-full object-cover" alt="Portfolio" loading="lazy" />
+                              </div>
+                           ))}
                         </div>
                      </div>
                   )}
 
-                  <div className="space-y-4">
-                     <h4 className="text-xs font-bold text-white/50 uppercase tracking-widest flex items-center gap-2">
-                        <Sparkles size={14} className="text-pink-400" /> Key Interests
-                     </h4>
-                     <div className="flex flex-wrap gap-2.5">
+                  {/* Trust & Performance */}
+                  <div className="space-y-3">
+                     <h4 className="text-xs font-bold text-gray-500 dark:text-white/50 uppercase tracking-widest">Platform Trust</h4>
+                     <div className="grid grid-cols-2 gap-3">
+                        {user.completionRate !== undefined && (
+                           <StatBadge icon={<CheckCircle2 size={14} className="text-green-500" />} label="Completion" value={`${user.completionRate}%`} />
+                        )}
+                        {user.responseTime && (
+                           <StatBadge icon={<Clock size={14} className="text-orange-500" />} label="Response" value={user.responseTime} />
+                        )}
+                     </div>
+                  </div>
+
+                  {/* Interests / Tags */}
+                  <div className="space-y-3 pb-8">
+                     <h4 className="text-xs font-bold text-gray-500 dark:text-white/50 uppercase tracking-widest">Expertise</h4>
+                     <div className="flex flex-wrap gap-2">
                         {user.tags.map(tag => (
-                           <span key={tag} className="text-[13px] font-bold bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-white/90 border border-white/10 hover:bg-white/20 transition-colors shadow-sm">
-                              #{tag}
+                           <span key={tag} className="text-xs font-semibold bg-gray-100 dark:bg-white/5 px-3 py-1.5 rounded-lg text-gray-700 dark:text-white/80 border border-gray-200 dark:border-white/5">
+                              {tag}
                            </span>
                         ))}
                      </div>
                   </div>
+
                </div>
             )}
-
          </div>
       </div>
    );

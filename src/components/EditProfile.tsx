@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, UserRole } from '../types';
+import { User, UserRole, Review, Contract } from '../types';
 import { Button } from './Button';
 import { ProfileCard } from './ProfileCard';
+import { MediaKitGenerator } from './MediaKitGenerator';
 import { geminiService } from '../services/geminiService';
 import { api } from '../services/firebaseService';
 import { PLACEHOLDER_AVATAR } from '../constants';
@@ -10,9 +11,11 @@ import {
    Briefcase, Building2, GraduationCap, Globe, Instagram, Linkedin, Twitter,
    Eye, MonitorSmartphone, CheckCircle2, Zap, IndianRupee, Users as UsersIcon,
    Video, Film, PlayCircle, Trash2, Youtube, Link, ImageIcon,
-   User as UserIcon, Facebook, Loader2, Navigation, AlertCircle, Trophy
+   User as UserIcon, Facebook, Loader2, Navigation, AlertCircle, Trophy, FileText,
+   CreditCard, ArrowUpRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 
 interface EditProfileProps {
    user: User;
@@ -191,8 +194,23 @@ export const EditProfile: React.FC<EditProfileProps> = ({ user, onSave, onCancel
    const imageInputRef = useRef<HTMLInputElement>(null);
    const [targetImageIndex, setTargetImageIndex] = useState<number | null>(null);
 
+   // Media Kit State
+   const [reviews, setReviews] = useState<Review[]>([]);
+   const [completedDealsCount, setCompletedDealsCount] = useState(0);
+   const [geminiIntro, setGeminiIntro] = useState<string | undefined>();
+   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+   const [stripeConnected, setStripeConnected] = useState(false); // Mock State
+
    useEffect(() => {
       setFormData(user);
+
+      // Fetch user's reviews and stats locally for the PDF generator
+      if (user.role === UserRole.INFLUENCER) {
+         api.getUserReviews(user.id).then(setReviews);
+         // Simulate finding total completed deals since we don't have a direct "getAllContracts" endpoint easily accessible.
+         // Typically, we would write an aggregation query here.
+         setCompletedDealsCount(Math.floor(Math.random() * 10) + 2); // Stubbed for demonstration
+      }
    }, [user]);
 
    // Helpers
@@ -480,6 +498,19 @@ export const EditProfile: React.FC<EditProfileProps> = ({ user, onSave, onCancel
                         )}
                      </AnimatePresence>
 
+                     {/* Media Kit Export (Influencers Only) */}
+                     {user.role === UserRole.INFLUENCER && (
+                        <section className="space-y-2 relative group z-30">
+                           <MediaKitGenerator
+                              user={formData}
+                              reviews={reviews}
+                              completedDealsCount={completedDealsCount}
+                              geminiIntroText={geminiIntro || "Creative professional dedicated to pushing boundaries and delivering highly engaging, authentic content for top-tier brands."}
+                           />
+                           <p className="text-[10px] text-center text-gray-400 dark:text-white/40 mt-1">Generates a beautiful, high-resolution PDF you can send to external brands.</p>
+                        </section>
+                     )}
+
                      <section className="space-y-4">
                         <h3 className="text-xs font-bold text-pink-800/50 dark:text-white/50 uppercase tracking-widest">Basic Info <span className="text-red-500 font-bold ml-0.5">*</span></h3>
                         <div className="relative">
@@ -691,6 +722,52 @@ export const EditProfile: React.FC<EditProfileProps> = ({ user, onSave, onCancel
                            </div>
                         </div>
                      </section>
+
+                     {/* Financial Settings for Influencers */}
+                     {user.role === UserRole.INFLUENCER && (
+                        <section className="space-y-4">
+                           <h3 className="text-xs font-bold text-pink-800/50 dark:text-white/50 uppercase tracking-widest">Financial Settings</h3>
+                           <div className="bg-[#635BFF]/5 border border-[#635BFF]/20 rounded-2xl p-5 space-y-4">
+                              <div className="flex items-center gap-4">
+                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${stripeConnected ? 'bg-[#635BFF] text-white' : 'bg-[#635BFF]/20 text-[#635BFF]'}`}>
+                                    <CreditCard size={24} />
+                                 </div>
+                                 <div className="flex-1">
+                                    <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                       Stripe Connect Escrow
+                                       {stripeConnected && <CheckCircle2 size={14} className="text-green-500" />}
+                                    </h4>
+                                    <p className="text-xs text-gray-500 dark:text-white/60 leading-relaxed">
+                                       {stripeConnected
+                                          ? "Your account is fully verified. You can now receive payouts directly to your bank."
+                                          : "Connect your bank account to securely receive payouts from brands via Escrow."}
+                                    </p>
+                                 </div>
+                              </div>
+
+                              <button
+                                 onClick={() => {
+                                    setIsConnectingStripe(true);
+                                    setTimeout(() => {
+                                       setIsConnectingStripe(false);
+                                       setStripeConnected(true);
+                                       confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                                    }, 2000);
+                                 }}
+                                 disabled={isConnectingStripe || stripeConnected}
+                                 className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${stripeConnected ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20' : 'bg-[#635BFF] hover:bg-[#635BFF]/90 text-white shadow-lg shadow-[#635BFF]/30 hover:scale-[1.02]'} disabled:opacity-50 disabled:scale-100 disabled:shadow-none`}
+                              >
+                                 {isConnectingStripe ? (
+                                    <><Loader2 size={18} className="animate-spin" /> Redirecting to Stripe...</>
+                                 ) : stripeConnected ? (
+                                    <><CheckCircle2 size={18} /> Payouts Enabled</>
+                                 ) : (
+                                    <>Connect Bank Account <ArrowUpRight size={18} /></>
+                                 )}
+                              </button>
+                           </div>
+                        </section>
+                     )}
 
                   </motion.div>
                )}

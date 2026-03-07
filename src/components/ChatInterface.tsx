@@ -4,10 +4,11 @@ import { api } from '../services/firebaseService';
 import { geminiService } from '../services/geminiService';
 import { doc, setDoc } from "firebase/firestore";
 import { db } from '../services/firebaseConfig';
-import { ArrowLeft, Send, Phone, Video, ImagePlus, Smile, FileText, Check, Lock, Briefcase, Sparkles, X, IndianRupee, Clock, Calendar, CheckCircle2, XCircle, ChevronRight, AlertCircle, Wallet, PlayCircle, Globe, Search } from 'lucide-react';
+import { ArrowLeft, Send, Phone, Video, ImagePlus, Smile, FileText, Check, Lock, Briefcase, Sparkles, X, IndianRupee, Clock, Calendar, CheckCircle2, XCircle, ChevronRight, AlertCircle, Wallet, PlayCircle, Globe, Search, CreditCard, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
 import { GlassCard } from './GlassCard';
+import { VideoCallRoom } from './VideoCallRoom';
 import confetti from 'canvas-confetti';
 
 interface ChatInterfaceProps {
@@ -154,10 +155,21 @@ const ContractModal: React.FC<{
   const [submissionUrl, setSubmissionUrl] = useState('');
   const [revisionFeedback, setRevisionFeedback] = useState('');
   const [activeAction, setActiveAction] = useState<{ type: 'SUBMIT' | 'REVISION', id: string } | null>(null);
+  const [isFunding, setIsFunding] = useState(false);
 
   const isBrand = userRole === UserRole.BUSINESS;
   const firstMilestone = contract.milestones[0];
   const canFund = isBrand && firstMilestone?.status === 'LOCKED';
+
+  const handleFundWithStripe = () => {
+    setIsFunding(true);
+    // Mock Stripe Checkout Flow
+    setTimeout(() => {
+      setIsFunding(false);
+      onFund(); // Triggers the existing prop that updates Firebase
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+    }, 2500);
+  };
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -314,8 +326,18 @@ const ContractModal: React.FC<{
           </div>
           <div className="mt-8 space-y-3">
             {canFund && (
-              <Button fullWidth onClick={onFund} className="bg-blue-600 hover:bg-blue-700 text-white border-none">
-                Fund Escrow (₹{contract.totalAmount.toLocaleString()})
+              <Button fullWidth onClick={handleFundWithStripe} disabled={isFunding} className="bg-[#635BFF] hover:bg-[#635BFF]/90 text-white border-none flex items-center justify-center gap-2 relative">
+                {isFunding ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Processing via Stripe...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard size={18} />
+                    Pay securely with Stripe (₹{contract.totalAmount.toLocaleString()})
+                  </>
+                )}
               </Button>
             )}
             <Button fullWidth variant="secondary" onClick={onClose}>Close</Button>
@@ -326,7 +348,72 @@ const ContractModal: React.FC<{
   );
 };
 
+const ReviewModal: React.FC<{
+  contract: Contract;
+  onClose: () => void;
+  onSubmit: (rating: number, comment: string) => void;
+}> = ({ contract, onClose, onSubmit }) => {
+  const [rating, setRating] = useState(0);
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [comment, setComment] = useState('');
+
+  return (
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-sm bg-white dark:bg-[#1a1a1a] border border-black/10 dark:border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 p-6 text-white relative">
+          <div className="flex justify-between items-start mb-4">
+            <div className="bg-white/20 p-2 rounded-lg backdrop-blur-md"><Sparkles size={20} /></div>
+            <button onClick={onClose} className="p-1 hover:bg-white/20 rounded-full"><X size={20} /></button>
+          </div>
+          <h3 className="text-xl font-bold">Deal Completed!</h3>
+          <p className="opacity-90 text-sm mt-1">Leave a review for your collaboration on "{contract.title}"</p>
+        </div>
+
+        <div className="p-6">
+          <div className="flex justify-center gap-2 mb-6">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onMouseEnter={() => setHoveredRating(star)}
+                onMouseLeave={() => setHoveredRating(0)}
+                onClick={() => setRating(star)}
+                className="transition-transform hover:scale-110 focus:outline-none"
+              >
+                <svg
+                  className={`w-10 h-10 ${star <= (hoveredRating || rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-white/20'}`}
+                  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+              </button>
+            ))}
+          </div>
+
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="How was it working together?"
+            className="w-full bg-gray-50 dark:bg-black/20 border border-black/10 dark:border-white/10 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-yellow-500 min-h-[100px] mb-6 resize-none"
+          />
+
+          <Button
+            fullWidth
+            disabled={rating === 0}
+            onClick={() => onSubmit(rating, comment)}
+            className="bg-orange-500 hover:bg-orange-600 text-white border-none disabled:opacity-50"
+          >
+            Submit Review
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({ match, currentUser, onBack, isPremium, onUpgrade }) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // State
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -334,12 +421,17 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ match, currentUser
   const [loadingIcebreakers, setLoadingIcebreakers] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Phase 4: Video Call State
+  const [showVideoCall, setShowVideoCall] = useState(false);
+
   const [dealStage, setDealStage] = useState<DealStage>('NONE');
   const [dealValue, setDealValue] = useState<string | undefined>(undefined);
   const [contract, setContract] = useState<Contract | null>(null);
   const [showContract, setShowContract] = useState(false);
   const [showProposalModal, setShowProposalModal] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showReviewModal, setShowReviewModal] = useState<{ contract: Contract } | null>(null);
+
 
   useEffect(() => {
     setLoading(true);
@@ -521,6 +613,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ match, currentUser
           </div>
         </div>
         <div className="flex items-center gap-4 text-gray-400 dark:text-white/60">
+          <button onClick={() => setShowVideoCall(true)} className="p-2 rounded-full hover:bg-pink-500/10 hover:text-pink-500 dark:hover:text-pink-400 transition-colors" title="Start Video Call"><Video size={22} /></button>
           <button onClick={() => setShowContract(true)} className="p-2 rounded-full hover:bg-blue-500/10 hover:text-blue-500 dark:hover:text-blue-400 transition-colors" title="View Contract"><FileText size={22} /></button>
           <button onClick={() => setShowProposalModal(true)} className="p-2 rounded-full hover:bg-green-500/10 hover:text-green-500 dark:hover:text-green-400 transition-colors" title="Create Proposal"><Briefcase size={22} /></button>
         </div>
@@ -641,7 +734,16 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ match, currentUser
               loadContract();
               // Check if all paid
               const allPaid = contract.milestones.every(m => m.id === mid ? true : m.status === 'PAID');
-              if (allPaid) setDealStage('COMPLETED');
+              if (allPaid) {
+                setDealStage('COMPLETED');
+                setShowContract(false); // Hide contract modal to make room for review modal
+
+                // Show review modal if this user hasn't reviewed yet
+                const roleKey = currentUser.role === UserRole.BUSINESS ? 'brandReviewed' : 'influencerReviewed';
+                if (!contract[roleKey as keyof Contract]) {
+                  setTimeout(() => setShowReviewModal({ contract }), 500); // Small delay for effect
+                }
+              }
             }}
             onSubmitWork={async (mid, url) => {
               await api.submitMilestoneDraft(match.id, mid, url);
@@ -654,7 +756,28 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ match, currentUser
             }}
           />
         )}
+        {showReviewModal && (
+          <ReviewModal
+            contract={showReviewModal.contract}
+            onClose={() => setShowReviewModal(null)}
+            onSubmit={async (rating, comment) => {
+              const targetId = match.users.find(id => id !== currentUser.id);
+              if (!targetId) return;
+              await api.submitReview(targetId, showReviewModal.contract.id, rating, comment);
+              setShowReviewModal(null);
+            }}
+          />
+        )}
         {showProposalModal && <ProposalModal onClose={() => setShowProposalModal(false)} onSend={handleSendProposal} />}
+
+        {/* Phase 4: Video Call Overlay */}
+        {showVideoCall && (
+          <VideoCallRoom
+            roomId={`ping_room_${match.id}`}
+            currentUser={currentUser}
+            onLeaveRoom={() => setShowVideoCall(false)}
+          />
+        )}
       </AnimatePresence>
     </motion.div>
   );

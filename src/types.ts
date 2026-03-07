@@ -75,6 +75,10 @@ export interface User {
   responseTime?: string; // e.g. "Under 2h"
   totalEarnings?: number; // Total net earnings securely extracted from Escrow deals
 
+  // Growth & Trust Phase Additions
+  rating?: number; // Average star rating (1-5)
+  reviewCount?: number; // Total number of reviews received
+
   // Extended Profile Details
   jobTitle?: string;
   company?: string;
@@ -182,6 +186,17 @@ export interface Contract {
     feedback?: string; // Brand notes
   }[];
   contractUrl?: string;
+  isReviewed?: boolean; // Flag to prevent double-reviewing a contract
+}
+
+export interface Review {
+  id: string;
+  contractId: string;
+  authorId: string;
+  targetId: string;
+  rating: number; // 1 to 5
+  comment: string;
+  timestamp: number;
 }
 
 export enum SwipeDirection {
