@@ -564,8 +564,12 @@ const App = () => {
                   </div>
 
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => handleDemoLogin('business')} className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
-                    <button type="button" onClick={() => handleDemoLogin('creator')} className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
+                    <SignInButton mode="modal" forceRedirectUrl="/app" initialValues={{ emailAddress: 'hello@pixelarcade.co' }}>
+                      <button type="button" className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-bold py-3 rounded-xl transition-colors border border-blue-200 flex items-center justify-center gap-1"><Briefcase size={12} /> Demo Brand</button>
+                    </SignInButton>
+                    <SignInButton mode="modal" forceRedirectUrl="/app" initialValues={{ emailAddress: 'alex@fitness.fit' }}>
+                      <button type="button" className="flex-1 bg-pink-50 hover:bg-pink-100 text-pink-600 text-xs font-bold py-3 rounded-xl transition-colors border border-pink-200 flex items-center justify-center gap-1"><Zap size={12} /> Demo Creator</button>
+                    </SignInButton>
                   </div>
                 </div>
               </motion.div>
