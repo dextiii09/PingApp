@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useLayoutEffect } from 'react';
-import { User, UserRole, Match, Notification } from './types';
+import { User, UserRole, Match, Notification, UserStatus, VerificationStatus } from './types';
 // Switch to real Firebase service
 import { api } from './services/firebaseService';
 import { isConfigured } from './services/firebaseConfig';
@@ -29,7 +29,7 @@ import { Check, Mail, Lock, ArrowRight, Sparkles, Briefcase, Camera, Globe, Tren
 import { motion, AnimatePresence } from 'framer-motion';
 import { App as CapApp } from '@capacitor/app';
 import { PushNotifications } from '@capacitor/push-notifications';
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from '@clerk/clerk-react';
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser, useAuth } from '@clerk/clerk-react';
 
 // Toast Component
 const Toast = ({ message, onClose }: { message: string, onClose: () => void }) => {
@@ -55,9 +55,12 @@ const Toast = ({ message, onClose }: { message: string, onClose: () => void }) =
 
 // Admin Credentials
 const ADMIN_ID = "admin@ping.com";
-const ADMIN_PASS = "Ping$2024!Secure";
+const ADMIN_PASS = "Secure@ping2026";
 
 const App = () => {
+  const { user: clerkUser, isLoaded: isClerkLoaded } = useUser();
+  const { signOut } = useAuth();
+
   // App State with Persistence
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('ping_session_user');
@@ -131,6 +134,49 @@ const App = () => {
       api.syncSession(user);
     }
   }, [user]);
+
+  // Sync Clerk Authentication State with internal app state
+  useEffect(() => {
+    if (!isClerkLoaded) return;
+
+    if (clerkUser) {
+      // Create a mapped user object from Clerk data
+      const clerkEmail = clerkUser.primaryEmailAddress?.emailAddress || '';
+      const isAdmin = clerkEmail === ADMIN_ID;
+
+      const mappedUser: User = {
+        id: clerkUser.id,
+        email: clerkEmail,
+        name: clerkUser.fullName || '',
+        avatar: clerkUser.imageUrl || '',
+        role: isAdmin ? UserRole.ADMIN : UserRole.INFLUENCER,
+        isPremium: false,
+        tags: [],
+        status: UserStatus.ACTIVE,
+        verificationStatus: VerificationStatus.PENDING,
+        joinedAt: Date.now(),
+        reportCount: 0,
+        settings: {
+          notifications: { matches: true, messages: true, tips: true, email: true },
+          darkMode: false
+        }
+      };
+
+      // Set internal state
+      setUser(mappedUser);
+      // Update View immediately
+      setView(isAdmin ? 'admin' : 'app');
+
+    } else {
+      // User is explicitly logged out of Clerk
+      if (user) {
+        // Clear local state if we had a user but Clerk says they are gone
+        localStorage.removeItem('ping_session_user');
+        setUser(null);
+        setView('landing');
+      }
+    }
+  }, [clerkUser, isClerkLoaded]);
 
   // Persistence Effect
   useEffect(() => {
@@ -421,6 +467,7 @@ const App = () => {
 
   const handleLogout = async () => {
     await api.logout();
+    await signOut(); // Also sign out of Clerk
     localStorage.removeItem('ping_session_user');
     setUser(null);
     setView('landing');
