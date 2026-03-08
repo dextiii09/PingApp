@@ -539,7 +539,7 @@ export const AdminDashboard = ({ onLogout }: { onLogout: () => void }) => {
                         </div>
                       </div>
                       <div className="flex-1 flex items-end gap-1 px-2 border-b border-white/5 pb-2">
-                        {stats.trends?.dailyMatches.map((d, i) => (
+                        {stats.trends?.dailyMatches?.map((d, i) => (
                           <div key={i} className="flex-1 bg-cyan-500/20 hover:bg-cyan-400/80 transition-all duration-300 relative group" style={{ height: `${Math.max(10, d.count * 10)}%` }}>
                             <div className="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-[9px] px-2 py-1 border border-cyan-500/30 text-cyan-400 font-mono whitespace-nowrap z-10 pointer-events-none">
                               {d.date}: {d.count} MATCHES
